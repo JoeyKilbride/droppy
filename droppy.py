@@ -26,10 +26,171 @@ from copy import deepcopy
 #import networkx as nx
 #from scipy.special import legendre
 
- 
+
+# General functions ******************************************************
 def normalise(arr):
     arr_norm = arr/np.max(arr)
     return arr_norm
+
+def get_radial_position(X, Y, xref, yref):
+    """Returns coordinate X,Y radial distance from centre of the array."""
+    radial = np.sqrt(((X-xref)**2+(Y-yref)**2))
+    return radial 
+
+def TouchingCircles(cx,cy,r, ca):
+    """filters touching circles from polydisperse array.
+    Returns boolean mask of touching circles to filter original arrays."""
+    print("Raw droplets: ", len(cx))
+    touching=np.ones([len(cx)],dtype=bool) 
+    for idx, i in enumerate(cx): 
+        print(idx)
+        for jdx, j in enumerate(cx):
+        
+            if touching[idx]==0:
+                continue
+            else:
+                s=np.sqrt((i-j)**2+(cy[idx]-cy[jdx])**2)
+                if s==0:
+                    #print("same droplet")
+                    #print("idx: "+str(idx)+" jdx: ", str(jdx))
+                    continue
+                elif s<(r[idx]+r[jdx]):
+                    print("idx: "+str(idx)+" jdx: ", str(jdx))
+                    if r[idx]>r[jdx]:
+                        touching[jdx]=0
+                        #print("Removing jdx: "+ str(jdx))
+                        #print("removed: ",count_nonzero(touching))
+                    else:
+                        touching[idx]=0
+                        #print("Removing idx: "+str(idx))
+                        #print("removed: ",count_nonzero(touching))
+                        continue
+                else:
+                    touching[idx]=1
+    print("filtered droplets: ", len(cx[touching]))
+    CX=cx[touching]
+    CY=cy[touching]
+    Rb=r[touching]
+    CA=ca[touching]  
+    return CX, CY, Rb, CA
+
+# IO functions ************************************************************
+def ReadSVGFile(directory, filename):
+    """Read optimised SVG text file and extracts circle coordinates
+    for input into Wray_et_al.2020.py.
+    Input: "Filename".svg 
+    Returns: Droplet Base Radius, Contact angle, X and Y droplet 
+                centres."""
+    CX    = np.empty((0,1), float)
+    CY    = np.empty((0,1), float)
+    R     = np.empty((0,1), float)
+    CA    = np.empty((0,1), float)
+
+
+    filename=filename+".svg"
+    file=open(os.path.join(directory,filename), 'r')
+    print("Found file: ", filename)
+    print("at: ", directory)
+    txt=file.readlines()
+    ca_global=[0]
+    for loop in range(len(txt)):
+
+            if txt[loop].find("<g fill")!=-1:
+
+                #print("All the droplets have the same contact angle.")
+                fillL=txt[loop].find("fill=\"")
+                fillU=txt[loop].find("\"",fillL+6)
+                fill=txt[loop][fillL+6  :fillU]
+                RGB=np.asarray(ImageColor.getcolor(fill, "RGB")) # convert hex to RGB
+                ca_global=(np.pi/255)*RGB # Radians
+            
+            elif(txt[loop].find("<circle")==-1 and txt[loop].find("fill=\"")!=-1): # check all non circle lines for global CA
+                #print("looking for fill in non circle line")
+                fillL=txt[loop].find("fill=\"")
+                fillU=txt[loop].find("\"",fillL+6)
+                fill=txt[loop][fillL+6:fillU]
+                RGB=np.asarray(ImageColor.getcolor(fill, "RGB"))
+                ca_global=(np.pi/255)*RGB # Radians
+
+
+
+            elif(txt[loop].find("<circle"))!=-1:
+                #print("Circle line found")
+                # Extract droplet x position    
+                cxL=txt[loop].find("cx=\"")
+                cxU=txt[loop].find("\"",cxL+4)
+                cx=np.double(txt[loop][cxL+4:cxU])/1e3
+                CX = np.append(CX, abs(cx)) 
+
+                # Extract droplet y position
+                cyL=txt[loop].find("cy=\"")
+                cyU=txt[loop].find("\"",cyL+4)
+                cy= np.double(txt[loop][cyL+4:cyU])/1e3
+                CY = np.append(CY, abs(cy)) # 
+
+                # Extract droplet radius
+                rL=txt[loop].find("r=\"")
+                rU=txt[loop].find(" ",rL)
+
+                r=np.double(txt[loop][rL+3:rU-1])/1000
+
+                R = np.append(R, r) # 
+                #format_float = "{:.10f}".format(r)
+                
+                # Extract droplet ca
+                fillL=txt[loop].find("fill=\"")
+                if fillL != -1: # Check anyway for individual CA
+                    fillU=txt[loop].find("\"",fillL+6)
+                    fill=txt[loop][fillL+6:fillU]
+                    RGB=np.asarray(ImageColor.getcolor(fill, "RGB"))
+                    ca_current=(np.pi/255)*RGB # Radians
+                    CA = np.append(CA, ca_current[0]) # 
+                else: # write global CA if individual CA not found
+                    CA = np.append(CA, ca_global[0]) #
+
+            else:
+                print("All detection options missed")
+    CY=-CY+2*max(CY)
+    file.close()
+    print("_____________________________________________")
+    print("Values retrieved from InkScape")
+    print("_____________________________________________")
+    print("\tCX= ",CX)
+    print("\tCY= ",CY)
+    print("\tCA= ",CA)
+    print("\tR=  ",R)
+    return CX, CY, R, CA
+
+def read_config(config_dir, file):
+    sys.path.insert(0, config_dir)
+    #import MDL_config as config
+    config=importlib.import_module(file, package=None) 
+    return config
+
+def load_MDL_pickle(directory):
+    """Load a measure_droplet_lifetime pickle."""
+    target = glob.glob(os.path.join(directory,"MDL_*.pickle"))[0]
+    if os.path.getsize(target)>0:
+        with open(target, 'rb') as handle:
+            input_dict = pickle.load(handle)
+    return input_dict
+
+# Visualisation functions **************************************************
+def UpdateDroplets(ax,cmap, normcmap, collection, CA, t):
+    ax.set_title('{:.3e}'.format(t))
+    clr=[]
+    
+    for ddx, d in enumerate(CA):
+        eclr=cmap(normcmap(d)) 
+        clr.append(eclr)   
+    collection.set_facecolor(clr)
+    del(clr)
+    plt.pause(0.001)
+    
+def get_cmap(n, name='prism'):
+    '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
+    RGB color; the keyword argument name must be a standard mpl colormap name.'''
+    return plt.cm.get_cmap(name, n)
     
 def ReportResults(Results):
     """Plots graphics from the evaportion data."""
@@ -92,22 +253,7 @@ def ReportResults(Results):
     Resultsfile.close()
     plt.show()
     return
-
-def read_config(config_dir, file):
-    sys.path.insert(0, config_dir)
-    #import MDL_config as config
-    config=importlib.import_module(file, package=None) 
-    return config
-
-def load_MDL_pickle(directory):
-    """Load a measure_droplet_lifetime pickle."""
-    target = glob.glob(os.path.join(directory,"MDL_*.pickle"))[0]
-    if os.path.getsize(target)>0:
-        with open(target, 'rb') as handle:
-            input_dict = pickle.load(handle)
-    return input_dict
-    
-    
+  
 def depositSquare(N,s,ca,Rb):
     # N, number of droplets NxN
     # s, separation (*Rb) 2=touching
@@ -190,52 +336,93 @@ def depositTriangle_NOTWORKING(N,s,ca,Rb):
     base_radius=np.ones(len(xcentres))*Rb
     return xcentres, ycentres, contact_angle, base_radius
 
-# def Tonini(CX,CY,Rb,CA):
+# Spherical cap geometry functions ***********************************************
 
-#     psi0 = np.pi-CA
-#     h = GetHeightCA(Rb, CA)
-    
-#     def Legendre(x,n):
-#         P_n = legendre(n)
-#         P_n_x = P_n(x)
-#         return P_n_x
-#     #https://mathworld.wolfram.com/ConicalFunction.html 
-#     def integrand(tau, xi, psi0, psi): 
-#         Mehler_func = Legendre(np.cosh(xi) ,complex(-1/2,tau))
-#         vals = Mehler_func*((np.cosh((np.pi-psi0)*tau)*np.cosh(psi*tau))/(np.cosh(np.pi*tau)*np.cosh(psi0*tau)))
-#         return vals
-    
-#     def calculate_integral(xi, psi0, psi):
-#         return quad(integrand, 0, np.inf, args=(xi, psi0, psi))[0]
-    
-    
 
-#     alpha=0# i think?
-#     gamma=0# could be??
-#     N = np.size(CX)
-#     X=np.empty([N,N])
-#     print(CX)
-#     for idx, i in enumerate(CX):
-#         for jdx, j in enumerate(CX):
-            
-#             psi0 = np.pi-CA[idx]
-#             if idx == jdx :     # the diagonal terms should be one
-#                 X[idx,jdx] = 1
-#             else:
-               
-#                 x = CX[idx]-CX[jdx]
-#                 y = CY[idx]-CY[jdx]
-#                 z = h[idx]
-#     # from http://www.fractalforums.com/theory/toroidal-coordinates/                
-#                 xi = np.sqrt((np.sqrt(x**2+y**2)-alpha)**2+z**2)
-#                 psi = np.arctan((z)/(np.sqrt(x**2+y**2)-alpha))-gamma
-#                 #phi = np.arctan(y/x)
-#                 Theta = np.cosh(xi)-np.cos(psi)
-#                 Sigma = np.sqrt(2)*Theta**(1/2)
-#                 calc_integrals= np.vectorize(calculate_integral)
-#                 X[idx,jdx]=Sigma*calc_integrals(xi, psi0, psi)
-#     return X
+def GetVolumeCA(CA, r_base):
+    """Calculates volume of a spherical cap from Contact angle (rads)
+    and base radius (m). Returns V in L."""
+    V=(np.pi/3)*((r_base/np.sin(CA))**3) *(2+np.cos(CA))*((1-np.cos(CA))**2)
+    V=V*1000 # m3 -> L
+    return V
+def GetBase(CA, V):
+    """Calculates Rb (m) of a spherical cap from Contact angle (rads)
+    and volume (m^3). Returns Rb in m."""
+    Rb=((V*np.sin(CA)**3)/((np.pi/3)*(2+np.cos(CA))*((1-np.cos(CA))**2)))**(1/3)
+    return Rb
 
+def GetVolume(height, r_base):
+    #print("height=",height)
+    #print("rbase=",r_base)
+    V=(1/6)*np.pi*height*(3*r_base**2+height**2) # m^3
+    #print("Volume in function = ",V)
+    V=V*1000 # Convert to litres
+    return V
+
+def BondNumber(del_rho,L,gamma):
+    """Returns the Bond Number of a droplet."""
+    Bo=(del_rho*9.81*L**2)/(gamma)
+    return Bo
+
+def GetCA(h,Rb):
+    """Returns the contact angle of a the spherically capped droplet
+        of height h and base radius Rb."""
+    return 2*np.arctan(h/Rb)
+
+def GetCAfromV(V, Rb, zero):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        Rb=np.array(Rb)
+        V=np.array(V)
+        height= GetHeight(Rb, V)
+        r = (Rb**2+height**2)/(2*height)    
+        prefactor=(np.pi/3)*r**3
+        A =  np.ones(len(V))
+        B =  0*np.ones(len(V))
+        C = -3*np.ones(len(V))
+        D =  2-(V/prefactor)
+        p=np.vstack([A,B,C,D]*prefactor)
+        cnum=len(p[0,:])
+        CA=np.empty([cnum])
+        for i in range(cnum):
+            if any(p[:,i]==np.Inf*np.ones(4)): 
+                CA[i]=0
+            else:
+                rts=np.roots(p[:,i])
+                CA[i] = abs(np.arccos(rts[-1]))
+    return CA
+
+def GetHeight(Rb, V):
+    """Calculates the height (output) of a spherical cap droplet
+        from the volume (input 2) and base radius (input 1).""" 
+    Rb=np.array(Rb)
+    V=np.array(V)
+
+    A=np.ones(len(Rb))
+    B=np.zeros(len(Rb))
+    C=3*Rb**2
+    D=6*V/np.pi # V is returned from GetVolume in Litres, convert to m^3
+    p=np.vstack([A,B,C,D])
+    hnum=len(p[0,:])
+    heights=np.empty([hnum])
+    for i in range(hnum):
+      #  print("p coeffs",p[:,i])
+        rts=np.roots(p[:,i])
+     #   print("roots",roots)
+        heights[i] = abs(rts[-1])
+    #print("height=",heights)
+    return heights
+
+def GetHeightCA(r, CA):
+    """Calculates the height (output) of a spherical cap droplet
+    from the CA (input 2) and base radius (input 1).""" 
+    h=r*np.tan(CA/2)
+    return h
+
+def GetRoC(r_base,h):
+    return (h**2+r_base**2)/(2*h)
+
+# Droplet evaporation functions *********************************
 
 def Masoud(x, y, a, dVdt_iso, CA):
     """Calculating Masoud et al. 2020 theoretical evaporation
@@ -340,228 +527,48 @@ def saturation_vapour_density(T_k):
 def diffusion_coeff(ToC):
     """from S3.3 doi.org/10.1016/B978-0-12-386910-4.00003-2."""
     return (1+0.007*ToC)*21.2e-6 
+# def Tonini(CX,CY,Rb,CA):
 
-def GetVolumeCA(CA, r_base):
-    """Calculates volume of a spherical cap from Contact angle (rads)
-    and base radius (m). Returns V in L."""
-    V=(np.pi/3)*((r_base/np.sin(CA))**3) *(2+np.cos(CA))*((1-np.cos(CA))**2)
-    V=V*1000 # m3 -> L
-    return V
-
-def GetVolume(height, r_base):
-    #print("height=",height)
-    #print("rbase=",r_base)
-    V=(1/6)*np.pi*height*(3*r_base**2+height**2) # m^3
-    #print("Volume in function = ",V)
-    V=V*1000 # Convert to litres
-    return V
-
-def BondNumber(del_rho,L,gamma):
-    """Returns the Bond Number of a droplet."""
-    Bo=(del_rho*9.81*L**2)/(gamma)
-    return Bo
-
-def GetCA(h,Rb):
-    """Returns the contact angle of a the spherically capped droplet
-        of height h and base radius Rb."""
-    return 2*np.arctan(h/Rb)
-
-def GetCAfromV(V, Rb, zero):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        Rb=np.array(Rb)
-        V=np.array(V)
-        height= GetHeight(Rb, V)
-        r = (Rb**2+height**2)/(2*height)    
-        prefactor=(np.pi/3)*r**3
-        A =  np.ones(len(V))
-        B =  0*np.ones(len(V))
-        C = -3*np.ones(len(V))
-        D =  2-(V/prefactor)
-        p=np.vstack([A,B,C,D]*prefactor)
-        cnum=len(p[0,:])
-        CA=np.empty([cnum])
-        for i in range(cnum):
-            if any(p[:,i]==np.Inf*np.ones(4)): 
-                CA[i]=0
-            else:
-                rts=np.roots(p[:,i])
-                CA[i] = abs(np.arccos(rts[-1]))
-    return CA
-
-def GetHeight(Rb, V):
-    """Calculates the height (output) of a spherical cap droplet
-        from the volume (input 2) and base radius (input 1).""" 
-    Rb=np.array(Rb)
-    V=np.array(V)
-
-    A=np.ones(len(Rb))
-    B=np.zeros(len(Rb))
-    C=3*Rb**2
-    D=6*V/np.pi # V is returned from GetVolume in Litres, convert to m^3
-    p=np.vstack([A,B,C,D])
-    hnum=len(p[0,:])
-    heights=np.empty([hnum])
-    for i in range(hnum):
-      #  print("p coeffs",p[:,i])
-        rts=np.roots(p[:,i])
-     #   print("roots",roots)
-        heights[i] = abs(rts[-1])
-    #print("height=",heights)
-    return heights
-
-def GetHeightCA(r, CA):
-    """Calculates the height (output) of a spherical cap droplet
-    from the CA (input 2) and base radius (input 1).""" 
-    h=r*np.tan(CA/2)
-    return h
-
-def GetRoC(r_base,h):
-    return (h**2+r_base**2)/(2*h)
-
-def UpdateDroplets(ax,cmap, normcmap, collection, CA, t):
-    ax.set_title('{:.3e}'.format(t))
-    clr=[]
+#     psi0 = np.pi-CA
+#     h = GetHeightCA(Rb, CA)
     
-    for ddx, d in enumerate(CA):
-        eclr=cmap(normcmap(d)) 
-        clr.append(eclr)   
-    collection.set_facecolor(clr)
-    del(clr)
-    plt.pause(0.001)
+#     def Legendre(x,n):
+#         P_n = legendre(n)
+#         P_n_x = P_n(x)
+#         return P_n_x
+#     #https://mathworld.wolfram.com/ConicalFunction.html 
+#     def integrand(tau, xi, psi0, psi): 
+#         Mehler_func = Legendre(np.cosh(xi) ,complex(-1/2,tau))
+#         vals = Mehler_func*((np.cosh((np.pi-psi0)*tau)*np.cosh(psi*tau))/(np.cosh(np.pi*tau)*np.cosh(psi0*tau)))
+#         return vals
     
-def get_cmap(n, name='prism'):
-    '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
-    RGB color; the keyword argument name must be a standard mpl colormap name.'''
-    return plt.cm.get_cmap(name, n)
+#     def calculate_integral(xi, psi0, psi):
+#         return quad(integrand, 0, np.inf, args=(xi, psi0, psi))[0]
+    
+    
 
-def get_radial_position(X, Y, xref, yref):
-    """Returns coordinate X,Y radial distance from centre of the array."""
-    radial = np.sqrt(((X-xref)**2+(Y-yref)**2))
-    return radial 
-
-def ReadSVGFile(directory, filename):
-    """Read optimised SVG text file and extracts circle coordinates
-    for input into Wray_et_al.2020.py.
-    Input: "Filename".svg 
-    Returns: Droplet Base Radius, Contact angle, X and Y droplet 
-                centres."""
-    CX    = np.empty((0,1), float)
-    CY    = np.empty((0,1), float)
-    R     = np.empty((0,1), float)
-    CA    = np.empty((0,1), float)
-
-
-    filename=filename+".svg"
-    file=open(os.path.join(directory,filename), 'r')
-    print("Found file: ", filename)
-    print("at: ", directory)
-    txt=file.readlines()
-    ca_global=[0]
-    for loop in range(len(txt)):
-
-            if txt[loop].find("<g fill")!=-1:
-
-                #print("All the droplets have the same contact angle.")
-                fillL=txt[loop].find("fill=\"")
-                fillU=txt[loop].find("\"",fillL+6)
-                fill=txt[loop][fillL+6  :fillU]
-                RGB=np.asarray(ImageColor.getcolor(fill, "RGB")) # convert hex to RGB
-                ca_global=(np.pi/255)*RGB # Radians
+#     alpha=0# i think?
+#     gamma=0# could be??
+#     N = np.size(CX)
+#     X=np.empty([N,N])
+#     print(CX)
+#     for idx, i in enumerate(CX):
+#         for jdx, j in enumerate(CX):
             
-            elif(txt[loop].find("<circle")==-1 and txt[loop].find("fill=\"")!=-1): # check all non circle lines for global CA
-                #print("looking for fill in non circle line")
-                fillL=txt[loop].find("fill=\"")
-                fillU=txt[loop].find("\"",fillL+6)
-                fill=txt[loop][fillL+6:fillU]
-                RGB=np.asarray(ImageColor.getcolor(fill, "RGB"))
-                ca_global=(np.pi/255)*RGB # Radians
-
-
-
-            elif(txt[loop].find("<circle"))!=-1:
-                #print("Circle line found")
-                # Extract droplet x position    
-                cxL=txt[loop].find("cx=\"")
-                cxU=txt[loop].find("\"",cxL+4)
-                cx=np.double(txt[loop][cxL+4:cxU])/1e3
-                CX = np.append(CX, abs(cx)) 
-
-                # Extract droplet y position
-                cyL=txt[loop].find("cy=\"")
-                cyU=txt[loop].find("\"",cyL+4)
-                cy= np.double(txt[loop][cyL+4:cyU])/1e3
-                CY = np.append(CY, abs(cy)) # 
-
-                # Extract droplet radius
-                rL=txt[loop].find("r=\"")
-                rU=txt[loop].find(" ",rL)
-
-                r=np.double(txt[loop][rL+3:rU-1])/1000
-
-                R = np.append(R, r) # 
-                #format_float = "{:.10f}".format(r)
-                
-                # Extract droplet ca
-                fillL=txt[loop].find("fill=\"")
-                if fillL != -1: # Check anyway for individual CA
-                    fillU=txt[loop].find("\"",fillL+6)
-                    fill=txt[loop][fillL+6:fillU]
-                    RGB=np.asarray(ImageColor.getcolor(fill, "RGB"))
-                    ca_current=(np.pi/255)*RGB # Radians
-                    CA = np.append(CA, ca_current[0]) # 
-                else: # write global CA if individual CA not found
-                    CA = np.append(CA, ca_global[0]) #
-
-            else:
-                print("All detection options missed")
-    CY=-CY+2*max(CY)
-                    
-
-    file.close()
-    print("_____________________________________________")
-    print("Values retrieved from InkScape")
-    print("_____________________________________________")
-    print("\tCX= ",CX)
-    print("\tCY= ",CY)
-    print("\tCA= ",CA)
-    print("\tR=  ",R)
-
-    return CX, CY, R, CA
-
-def TouchingCircles(cx,cy,r, ca):
-    """filters touching circles from polydisperse array.
-    Returns boolean mask of touching circles to filter original arrays."""
-    print("Raw droplets: ", len(cx))
-    touching=np.ones([len(cx)],dtype=bool) 
-    for idx, i in enumerate(cx): 
-        print(idx)
-        for jdx, j in enumerate(cx):
-        
-            if touching[idx]==0:
-                continue
-            else:
-                s=np.sqrt((i-j)**2+(cy[idx]-cy[jdx])**2)
-                if s==0:
-                    #print("same droplet")
-                    #print("idx: "+str(idx)+" jdx: ", str(jdx))
-                    continue
-                elif s<(r[idx]+r[jdx]):
-                    print("idx: "+str(idx)+" jdx: ", str(jdx))
-                    if r[idx]>r[jdx]:
-                        touching[jdx]=0
-                        #print("Removing jdx: "+ str(jdx))
-                        #print("removed: ",count_nonzero(touching))
-                    else:
-                        touching[idx]=0
-                        #print("Removing idx: "+str(idx))
-                        #print("removed: ",count_nonzero(touching))
-                        continue
-                else:
-                    touching[idx]=1
-    print("filtered droplets: ", len(cx[touching]))
-    CX=cx[touching]
-    CY=cy[touching]
-    Rb=r[touching]
-    CA=ca[touching]  
-    return CX, CY, Rb, CA
+#             psi0 = np.pi-CA[idx]
+#             if idx == jdx :     # the diagonal terms should be one
+#                 X[idx,jdx] = 1
+#             else:
+               
+#                 x = CX[idx]-CX[jdx]
+#                 y = CY[idx]-CY[jdx]
+#                 z = h[idx]
+#     # from http://www.fractalforums.com/theory/toroidal-coordinates/                
+#                 xi = np.sqrt((np.sqrt(x**2+y**2)-alpha)**2+z**2)
+#                 psi = np.arctan((z)/(np.sqrt(x**2+y**2)-alpha))-gamma
+#                 #phi = np.arctan(y/x)
+#                 Theta = np.cosh(xi)-np.cos(psi)
+#                 Sigma = np.sqrt(2)*Theta**(1/2)
+#                 calc_integrals= np.vectorize(calculate_integral)
+#                 X[idx,jdx]=Sigma*calc_integrals(xi, psi0, psi)
+#     return X
