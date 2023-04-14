@@ -1,0 +1,11 @@
+d_centres      = "config_dir"
+fn_centres     = "Centres" # no extension
+d_video        = d_centres
+fn_video       = "23x23_2" # no extension
+COM            = False
+plotting       = True # plot results?
+UIcmap         = "jet_r" 
+export         = True
+evap_threshold = 0.005 # greyscale theshold to consider droplet gone
+v_calibration  = 66/386 # mm/px
+t_calibration  = 5 # s/fm
