@@ -169,18 +169,18 @@ def read_config(config_dir, file):
 
 def load_MDL_pickle(directory):
     """Load a measure_droplet_lifetime pickle."""
-    target = glob.glob(os.path.join(directory,"MDL_*.pickle"))[0]
+    target = glob.glob(os.path.join(directory,"MDL_*.pickle"))
     if os.path.getsize(target)>0:
         with open(target, 'rb') as handle:
             input_dict = pickle.load(handle)
     return input_dict
 
 # Visualisation functions **************************************************
-def UpdateDroplets(ax,cmap, normcmap, collection, CA, t):
+def UpdateDroplets(ax,cmap, normcmap, collection, dyn_var, radii, t):
     ax.set_title('{:.3e}'.format(t))
     clr=[]
-    
-    for ddx, d in enumerate(CA):
+    # update the circle colour =
+    for ddx, d in enumerate(dyn_var):
         eclr=cmap(normcmap(d)) 
         clr.append(eclr)   
     collection.set_facecolor(clr)
@@ -197,8 +197,8 @@ def ReportResults(Results):
     plt.close('all')
     fig_V = plt.figure()
     ax_V = fig_V.add_subplot(1, 1, 1)
-    fig_CA = plt.figure()
-    ax_CA = fig_CA.add_subplot(1, 1, 1)
+    fig_idx = plt.figure()
+    ax_idx = fig_idx.add_subplot(1, 1, 1)
     fig_dVdt = plt.figure()
     ax_dVdt = fig_dVdt.add_subplot(1, 1, 1)
     fig_dt, ax_dt = plt.subplots()
@@ -221,7 +221,11 @@ def ReportResults(Results):
         print("Inital Contact Angle: ", Results["RunTimeInputs"]["CA"][pdx])
         print("Inital CX: ", Results["RunTimeInputs"]["xcentres"][pdx])
         print(Results['Volume'][:,pdx]*1e6)
-        ax_CA.plot(Results['Time'], Results['Theta'][:,pdx], label=name, marker="o")
+        if Results['RunTimeInputs']['mode']=="CCR":
+            ax_idx.plot(Results['Time'], Results['Theta'][:,pdx], label=name, marker="o")
+        else:
+            ax_idx.plot(Results['Time'], Results['Radius'][:,pdx], label=name, marker="o")
+            
         ax_dVdt.plot(Results['Time'], Results['dVdt'][:,pdx]*1e6, label=name)
     print("t_evap = ", t_evap)
     #print("Mean calculation time: ",mean(Results['Calc_Time']))
@@ -235,15 +239,18 @@ def ReportResults(Results):
     ax_V.set_xlabel("Time (s)")
     if Results['RunTimeInputs']['DNum']<15:
         ax_V.legend()
-        ax_CA.legend()
+        ax_idx.legend()
         ax_dVdt.legend()
         
-    ax_CA.set_xlabel("Time (s)")
-    ax_CA.set_ylabel("\u03B8 (\u00b0)")
+    ax_idx.set_xlabel("Time (s)")
+    if Results['RunTimeInputs']['mode']=="CCR":
+        ax_idx.set_ylabel("\u03B8 (\u00b0)")
+    else:
+        ax_idx.set_ylabel(r"$R_{b}$ (mm)")
     ax_dVdt.set_xlabel("Time (s)")
     ax_dVdt.set_ylabel("dV/dt (\u03BC"+ "L/s)")
     fig_V.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_V.png"))
-    fig_CA.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.png"))
+    fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.png"))
     fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.png"))
     fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.png"))
     #fig_tevap.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_tevap.png"))

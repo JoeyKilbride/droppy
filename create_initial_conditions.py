@@ -3,16 +3,19 @@ import droppy as dpy
 import numpy as np
 import The_Models as mod
 import sys
-sys.path.insert(0, r'\\NTU-DPM-CTY.ads.ntu.ac.uk\ERD160_projects$\aaaa_Joey\Scripts')
+#sys.path.insert(0, r'\\NTU-DPM-CTY.ads.ntu.ac.uk\ERD160_projects$\aaaa_Joey\Scripts') # Windows
+sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/') # Mac
+print("path:", sys.path)
 import Visualisation as vis
 
 def create_initial_conditions(val, directory):
     """Function for writing dictionary initial conditions for Wray or Masoud 
     scripts."""
-    c = dpy.read_config(directory, "MDTM_config")
+    c = dpy.read_config(directory, "DTM_config")
     if c.filter_touching == True:
-        c.CX, c.CY, c.Rb, c.CA = dpy.TouchingCircles(c.c.CX,c.CY,c.Rb,c.CA)
-        
+        c.CX, c.CY, c.Rb, c.CA = dpy.TouchingCircles(c.CX,c.CY,c.Rb,c.CA)
+    c.CX,c.CY,c.Rb = dpy.depositHexagon(5,3,1e-3)
+    c.CA = np.ones(len(c.CX))*np.pi/2
     filename = c.prefix+'_'+str(len(c.CX))
     RunTimeInputs={} # defines dict
     RunTimeInputs['Rb']=c.Rb                 # Droplet base radius (metres)
@@ -28,15 +31,16 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['Directory']=directory     # where to save data (absolute, no trailing \)
     RunTimeInputs['Filename']=filename       # what to call data (no exts)
     RunTimeInputs['Transient_Length']=c.TL   # delay before updating evap rate (s)
+    RunTimeInputs['mode']=c.mode
     RunTimeInputs['Vi'] = dpy.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     
-    return RunTimeInputs
+    return RunTimeInputs, c.saving, c.compare
 
 # ==================USER INPUTS============================================
 
-directory = r'Z:\aaaa_Joey\Large Arrays\Convection\Temperature_variations'
-saving = True
-compare = False
+directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Array drying/Hexagon"
+#saving = True
+#compare = False
 
 # config file:
     # saving : 
@@ -46,11 +50,12 @@ compare = False
     # CX,CY,CA,Rb :
     # #CX, CY, Rb = 
     # Ambient_RH, Ambient_T, t, dt, TL = 0.30, 25, 0., 500, 0
-    # model = "Masoud" # "Wray" or "Masoud"
+    # model : "Masoud" # "Wray" or "Masoud"
+    # mode : "CCA" or "CCR"
 #==========================================================================
 
 for i in range(1):
-    RunTimeInputs = create_initial_conditions(i,directory)
+    RunTimeInputs, saving, compare = create_initial_conditions(i,directory)
     if RunTimeInputs['model'] == "Wray":
         Results = mod.WrayEvaporate(RunTimeInputs)
     elif RunTimeInputs['model'] == "Masoud":

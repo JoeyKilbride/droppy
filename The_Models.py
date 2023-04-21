@@ -8,7 +8,7 @@ import timeit
 import time
 import sys
 matplotlib_axes_logger.setLevel('ERROR')
-sys.path.insert(0, r'\\NTU-DPM-CTY.ads.ntu.ac.uk\ERD160_projects$\aaaa_Joey\Scripts')
+sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/')
 import Visualisation as vis
 
 # =============================================================================
@@ -206,7 +206,16 @@ def WrayEvaporate(RunTimeInputs):
     WrayResults["RunTimeInputs"]=RunTimeInputs
     WrayResults["Calc_Time"]=Calc_Time    
     return WrayResults
-
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
 def MasoudEvaporate(RunTimeInputs):
     """main function."""
     
@@ -218,14 +227,16 @@ def MasoudEvaporate(RunTimeInputs):
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']
     r0       = RunTimeInputs['Rb']
+    theta    = RunTimeInputs['CA']
     t        = RunTimeInputs['t']
-    Vi       = RunTimeInputs['Vi'] 
+    Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
 
     gone        = np.ones(RunTimeInputs['DNum'])==1
     alive       = np.ones(RunTimeInputs['DNum'])==1
     V           = np.ones(RunTimeInputs['DNum'])
     V_t         = np.empty((0,RunTimeInputs['DNum']), float)
+    r0_t        = np.empty((0,RunTimeInputs['DNum']), float)
     dVdt_t      = np.empty((0,RunTimeInputs['DNum']), float)
     t_i         = np.empty((0,1), float)
     theta_t     = np.empty((0,RunTimeInputs['DNum']), float)
@@ -252,13 +263,19 @@ def MasoudEvaporate(RunTimeInputs):
     # ax1.set_ylim(ymin, ymax)
     # ax2.set_xlim(xmin, xmax)
     # ax2.set_ylim(ymin, ymax)
+    cmtype1='gnuplot2_r'
+    cmtype2='hot'
+    
+    #CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot)
     centres=list(zip(list(xcentres),list(ycentres)))
     dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, RunTimeInputs['CA'], 997) # Using Hu & Larson 2002 eqn. 19
-    cmap1, normcmap1, collection1=vis.CreateDroplets(ax1, fig, 'gnuplot2_r', centres, r0, RunTimeInputs['CA']*(180/np.pi),0,90, True)
-    cmap2, normcmap2, collection2=vis.CreateDroplets(ax2, fig, 'hot', centres, r0, np.zeros(RunTimeInputs['DNum']),max(dVdt_iso*1000)/4,0,True)#'RdYlGn'
+    vmax1 = [0,90]
+    vmax2 = [max(dVdt_iso*1000)/4,0]
+    cmap1, normcmap1, collection1=vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
+    cmap2, normcmap2, collection2=vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
     
     residual=0;
-    ZERO=min(Vi)/1000 # IS THIS CORRECT???
+    ZERO=min(Vi)/10000 # IS THIS CORRECT???
     print("\tDroplets = ", RunTimeInputs['DNum'])
     print("\tr0 = ", r0)
     print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
@@ -275,9 +292,13 @@ def MasoudEvaporate(RunTimeInputs):
         print("___________________Remaining Evaporating____________________")
         
         while not(any(Vi[alive] <= ZERO)):
-            
-            theta = dpy.GetCAfromV(Vi/1000, r0, ZERO)  
-            print("Contact Angle (\u00B0)= ", theta*180/np.pi)
+            if (RunTimeInputs['mode'] == "CCR"):
+                theta = dpy.GetCAfromV(Vi/1000, r0, ZERO)  
+                print("Contact Angle (\u00B0)= ", theta*180/np.pi)
+            elif (RunTimeInputs['mode'] == "CCA"):
+                r0 = dpy.GetBase(theta, Vi/1000)
+                print("Base radius (m)= ", r0)
+                         
 
             Vprev       = deepcopy(Vi)
             #tic = time.perf_counter()
@@ -297,15 +318,24 @@ def MasoudEvaporate(RunTimeInputs):
                 dVdt[transient_droplets] = deepcopy(dVdt_transient[transient_droplets])
             t_i     = np.vstack([t_i, t]) # record time steps
             V_t     = np.vstack([V_t, Vi]) # add new volumes to array
+            r0_t    = np.vstack([r0_t, r0])
             theta_t = np.vstack([theta_t, theta*180/np.pi])
+            
             dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             
             #writer.grab_frame()
-            dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi, t)
-            dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt, t)
+            if RunTimeInputs['mode']=="CCR":
+                dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
+                dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt,r0, t)
+            else:
+                ax1.clear()
+                ax2.clear()
+                vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
+                vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
+                plt.pause(0.001)
             #writer.grab_frame()
             
             print("Current Volume"+"(\u03BC"+ "L)=",Vi/1e-6)
@@ -336,8 +366,22 @@ def MasoudEvaporate(RunTimeInputs):
     print("Loop ran for: ",loop_end-loop_start)
     V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
     t_i = np.vstack([t_i, t]) # add final times to array
-    theta = dpy.GetCAfromV(Vi/1000, r0, ZERO) 
-    theta_t= np.vstack([theta_t, theta*180/np.pi])
+    if (RunTimeInputs['mode'] == "CCR"):
+        theta = dpy.GetCAfromV(Vi/1000, r0, ZERO) 
+        theta_t= np.vstack([theta_t, theta*180/np.pi])
+        # update final plot
+        dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
+        dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt,r0, t)
+    elif (RunTimeInputs['mode'] == "CCA"):
+        r0 = dpy.GetBase(theta, Vi/1000)
+        r0_t    = np.vstack([r0_t, r0])
+        # update final plot
+        ax1.clear()
+        ax2.clear()
+        vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
+        vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
+        plt.pause(0.001)
+
     dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
     print("_____________________________________________")
     print("Residual Volume error = ", residual)
@@ -348,7 +392,11 @@ def MasoudEvaporate(RunTimeInputs):
     MasoudResults["Time"]=t_i
     MasoudResults["Volume"]=V_t
     MasoudResults["dVdt"]=dVdt_t
-    MasoudResults["Theta"]= theta_t
+    if (RunTimeInputs['mode'] == "CCR"):
+        MasoudResults["Theta"] = theta_t
+    elif (RunTimeInputs['mode'] == "CCA"):
+        MasoudResults['Radius'] = r0_t
+    
     MasoudResults["RunTimeInputs"]=RunTimeInputs
     #WrayResults["Calc_Time"]=Calc_Time
 
