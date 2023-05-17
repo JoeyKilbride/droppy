@@ -167,12 +167,30 @@ def read_config(config_dir, file):
     config=importlib.import_module(file, package=None) 
     return config
 
-def load_MDL_pickle(directory):
-    """Load a measure_droplet_lifetime pickle."""
-    target = glob.glob(os.path.join(directory,"MDL_*.pickle"))
-    if os.path.getsize(target)>0:
-        with open(target, 'rb') as handle:
-            input_dict = pickle.load(handle)
+def load_MDL_pickle(directory, prefix=None):
+    """Load a measure_droplet_lifetime pickle.
+        prefix (Optional): specify a specific filename (no ext)."""
+    print("Trying with .pickle")
+    if prefix==None:
+        prefix = "MDL_*.pickle"
+    else:
+        prefix = prefix + ".pickle"
+    try:
+        target = glob.glob(os.path.join(directory,prefix))[0]
+        if os.path.getsize(target)>0:
+            with open(target, 'rb') as handle:
+                input_dict = pickle.load(handle)
+    except:
+        print("Trying .pkl")
+        if prefix==None:
+            prefix = "MDL_*.pkl"
+        else:
+            prefix = prefix[:-7]+ ".pkl"
+        target = glob.glob(os.path.join(directory,prefix))[0]        
+        if os.path.getsize(target)>0:
+            with open(target, 'rb') as handle:
+                input_dict = pickle.load(handle)
+
     return input_dict
 
 # Visualisation functions **************************************************
