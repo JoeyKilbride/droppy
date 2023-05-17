@@ -14,8 +14,7 @@ def create_initial_conditions(val, directory):
     c = dpy.read_config(directory, "DTM_config")
     if c.filter_touching == True:
         c.CX, c.CY, c.Rb, c.CA = dpy.TouchingCircles(c.CX,c.CY,c.Rb,c.CA)
-    c.CX,c.CY,c.Rb = dpy.depositHexagon(5,3,1e-3)
-    c.CA = np.ones(len(c.CX))*np.pi/2
+
     filename = c.prefix+'_'+str(len(c.CX))
     RunTimeInputs={} # defines dict
     RunTimeInputs['Rb']=c.Rb                 # Droplet base radius (metres)
@@ -34,28 +33,36 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['mode']=c.mode
     RunTimeInputs['Vi'] = dpy.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     
-    return RunTimeInputs, c.saving, c.compare
+    return RunTimeInputs, c.saving, c.compare, c.cmap_name
 
 # ==================USER INPUTS============================================
 
-directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Array drying/Hexagon"
+directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Initial_volume"
 #saving = True
 #compare = False
 
-# config file:
-    # saving : 
-    # compare : 
-    # filter_touching : 
-    # prefix  : 
-    # CX,CY,CA,Rb :
-    # #CX, CY, Rb = 
-    # Ambient_RH, Ambient_T, t, dt, TL = 0.30, 25, 0., 500, 0
-    # model : "Masoud" # "Wray" or "Masoud"
-    # mode : "CCA" or "CCR"
-#==========================================================================
+# You need to have a config file in the directory specified above
+# with the following variables defined:
+    # saving : Boolean (True/False), saving the output data to pickle and visualisation images.
+    # compare : Boolean (True/False), compare to experimental data in the same directory
+    # filter_touching : Boolean (True/False), remove droplets which overlap
+    # prefix  : String name for file saving
+    # Droplet array geometries (numpy arrays)
+        # CX,CY : droplet centre coordinates
+        # CA,Rb : droplet initial contact angles and base radii
+    # Environment:
+        # Ambient_RH : Ambient relative humidity (0-1)
+        # Ambient_T : Ambient temperature (degrees C)
+    # Simulation parameters
+        # t  : Initial time (should always be zero, i should potentially remove this?) 
+        # dt : Timestep (seconds)
+        # TL : Transient time (seconds), how long to wait before disappearing droplets influence the
+        #      evaporation rate of the others
+        # model : "Wray" or "Masoud" (some features unavailable with Wray)
+        # mode : "CCA" or "CCR" (Constant Contact Angle or Constant Contact Radius)
 
 for i in range(1):
-    RunTimeInputs, saving, compare = create_initial_conditions(i,directory)
+    RunTimeInputs, saving, compare, cmap_name = create_initial_conditions(i,directory)
     if RunTimeInputs['model'] == "Wray":
         Results = mod.WrayEvaporate(RunTimeInputs)
     elif RunTimeInputs['model'] == "Masoud":
@@ -67,10 +74,11 @@ for i in range(1):
         dpy.ReportResults(Results)
     if compare:
         eResults = dpy.load_MDL_pickle(RunTimeInputs['Directory'])
-        vis.Compare2Data(Results, eResults)
+        vis.Compare2Data(Results, eResults, cmap_name)
     
 # =============================================================================
-#     
+
+
 # def Initialise_breath():
 #     """."""
 #     # SVG="5x2 Rectangle"
