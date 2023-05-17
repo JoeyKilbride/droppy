@@ -89,16 +89,16 @@ def WrayEvaporate(RunTimeInputs):
     # plt.pause(0.1)
     residual=0
     ZERO=min(Vi)/1000 # IS THIS CORRECT???
-    print("\tInitial Droplets = ", RunTimeInputs['DNum'])
-    print("\tInitial Base Radius (m) = ", r0)
-    print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
-    print("\tInitial Contact Angle (\u00B0) = ", RunTimeInputs['CA']*(180/np.pi))
+    print("\tNumber of droplets = ", RunTimeInputs['DNum'])
+    #print("\tInitial Base Radius (m) = ", r0)
+    #print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
+    #print("\tInitial Contact Angle (\u00B0) = ", RunTimeInputs['CA']*(180/np.pi))
     print("_____________________________________________")
     dVdt_iso=dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], RunTimeInputs['Rb'], 0, 997) # Using Hu & Larson 2002 eqn. 19
     #with writer.saving(fig, os.path.join(RunTimeInputs['directory'],RunTimeInputs['filename']+".avi"), 100):
     transient_times = np.zeros(RunTimeInputs['DNum'])
     transient_droplets=np.zeros(RunTimeInputs['DNum'], dtype=bool) # none initially transient
-    print("transient_droplets", transient_droplets)
+    #print("transient_droplets", transient_droplets)
     dVdt_last =dpy.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07) # Place holder for future declaration
     while len(V[alive])>ZERO: # ?Can i make the Vi[alive] and remove the variable V?
         
@@ -109,11 +109,8 @@ def WrayEvaporate(RunTimeInputs):
         dVdt[alive]=deepcopy(dVdt_new) # update new evaporation rates for living droplets
         dVdt[transient_droplets] = deepcopy(dVdt_last[transient_droplets])
         dVdt = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
-        print("dVdt ("+"\u03BC"+"L/s) = ", dVdt)
         del_t=Vi[alive]/-dVdt[alive]
         fastest=np.where(del_t[del_t>0]==np.min(del_t[del_t>0]))
-        print("Fasted Selected: ", fastest[0])
-        print("Fastest Selected value: ", del_t[del_t>0][fastest][0])
         dt_fastest=del_t[del_t>0][fastest][0] # first element - all should be the same (coof_var should reveal if not)
         coof_var=np.std(del_t[del_t>0][fastest])/np.mean(del_t[del_t>0][fastest])
         print("Coefficient of variance (should be low) = ",coof_var)
@@ -121,7 +118,6 @@ def WrayEvaporate(RunTimeInputs):
         if np.any(transient_times<0):
             dt_transient=np.min(-transient_times[alive][transient_droplets[alive]]) # time till next transient period ends
             i_del_t = np.min([dt_transient,dt_fastest]) # step smallest time step
-            #print("transient times: ", dt_transient)
             t_transient=True
         else:
             i_del_t = dt_fastest
@@ -129,7 +125,6 @@ def WrayEvaporate(RunTimeInputs):
         #print("time_step_selected: ",i_del_t)
         while not(np.any(Vi[alive] <= ZERO)):
             #print("Transient_Droplets", transient_droplets)
-            
             #dVdt[transient_droplets] = dVdt_last[transient_droplets]
             t_i = np.vstack([t_i, t])
             V_t=np.vstack([V_t, Vi])# add new volumes to array
@@ -144,7 +139,7 @@ def WrayEvaporate(RunTimeInputs):
             print("Step ",str(step_counter)+", \u0394"+"t = (+",i_del_t,")s")
 
             Vi = Vprev+(dVdt*i_del_t) # Reduce volume 
-            print("Current Volume"+"(\u03BC"+ "L)=",Vi) 
+            #print("Current Volume"+"(\u03BC"+ "L)=",Vi) 
             #writer.grab_frame()
             dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi, t)
             dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt, t)
@@ -156,7 +151,7 @@ def WrayEvaporate(RunTimeInputs):
         
             transient_times[transient_droplets]=np.array([math.fsum([x,i_del_t]) for x in transient_times[transient_droplets]])
             transient_droplets = transient_times<0 # update transient droplets
-            print("updated transient times: ",transient_times)
+            #print("updated transient times: ",transient_times)
             break
         
             
@@ -184,7 +179,7 @@ def WrayEvaporate(RunTimeInputs):
         print("_____________________________________________")
         Vi = np.where(Vi>=ZERO,Vi,0)
         gone_record=np.vstack([gone_record, gone])
-        print("Contact Angle (\u00B0)= ", theta*180/np.pi)
+        #print("Contact Angle (\u00B0)= ", theta*180/np.pi)
         
     V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
     dVdt_t=np.vstack([dVdt_t, dVdt])# add new volumes to array
@@ -276,10 +271,10 @@ def MasoudEvaporate(RunTimeInputs):
     
     residual=0;
     ZERO=min(Vi)/10000 # IS THIS CORRECT???
-    print("\tDroplets = ", RunTimeInputs['DNum'])
-    print("\tr0 = ", r0)
-    print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
-    print("\tInitial Contact Angle (\u00B0) = ", RunTimeInputs['CA']*(180/np.pi))
+    print("\tNumber of droplets = ", RunTimeInputs['DNum'])
+    #print("\tr0 = ", r0)
+    #print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
+    #print("\tInitial Contact Angle (\u00B0) = ", RunTimeInputs['CA']*(180/np.pi))
     print("_____________________________________________")
     #with writer.saving(fig, "Evaporation_N="+str(RunTimeInputs['DNum'])+".avi", 100):
     loop_start=timeit.default_timer()    
@@ -294,10 +289,10 @@ def MasoudEvaporate(RunTimeInputs):
         while not(any(Vi[alive] <= ZERO)):
             if (RunTimeInputs['mode'] == "CCR"):
                 theta = dpy.GetCAfromV(Vi/1000, r0, ZERO)  
-                print("Contact Angle (\u00B0)= ", theta*180/np.pi)
+                #print("Contact Angle (\u00B0)= ", theta*180/np.pi)
             elif (RunTimeInputs['mode'] == "CCA"):
                 r0 = dpy.GetBase(theta, Vi/1000)
-                print("Base radius (m)= ", r0)
+                #print("Base radius (m)= ", r0)
                          
 
             Vprev       = deepcopy(Vi)
@@ -338,8 +333,8 @@ def MasoudEvaporate(RunTimeInputs):
                 plt.pause(0.001)
             #writer.grab_frame()
             
-            print("Current Volume"+"(\u03BC"+ "L)=",Vi/1e-6)
-            print("Evaporation Rate"+"(\u03BC"+ "L/s)=",dVdt/1e-6)
+            #print("Current Volume"+"(\u03BC"+ "L)=",Vi/1e-6)
+            #print("Evaporation Rate"+"(\u03BC"+ "L/s)=",dVdt/1e-6)
             
             transient_times[transient_droplets]=np.array([math.fsum([x,dt]) for x in transient_times[transient_droplets]])
             transient_droplets = transient_times<0 # update transient droplets
