@@ -70,7 +70,7 @@ def WrayEvaporate(RunTimeInputs):
     # ax2.set_aspect(1)
     # # xmax=max(xcentres)+max(r0)
     # xmin=min(xcentres)-max(r0)
-    # ymax=max(ycentres)+max(r0) 
+    # ymax=max(ycentres)+max(r0)      s
     # ymin=min(ycentres)-max(r0)
     # ax1.set_xlim(xmin, xmax)
     # ax1.set_ylim(ymin, ymax)
@@ -78,7 +78,7 @@ def WrayEvaporate(RunTimeInputs):
     # ax2.set_ylim(ymin, ymax)
 
     centres=list(zip(list(xcentres),list(ycentres)))
-    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, 0, 997) # Using Hu & Larson 2002 eqn. 19
+    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
     cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, 'gnuplot2_r', centres,r0, RunTimeInputs['CA']*(180/np.pi),0,90, True)
     cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, 'seismic_r', centres,r0, np.zeros(RunTimeInputs['DNum']),max(-dVdt_iso)*-100,max(-dVdt_iso)*100, True)
 
@@ -94,7 +94,7 @@ def WrayEvaporate(RunTimeInputs):
     #print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
     #print("\tInitial Contact Angle (\u00B0) = ", RunTimeInputs['CA']*(180/np.pi))
     print("_____________________________________________")
-    dVdt_iso=dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], RunTimeInputs['Rb'], 0, 997) # Using Hu & Larson 2002 eqn. 19
+    dVdt_iso=dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], RunTimeInputs['Rb'], 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
     #with writer.saving(fig, os.path.join(RunTimeInputs['directory'],RunTimeInputs['filename']+".avi"), 100):
     transient_times = np.zeros(RunTimeInputs['DNum'])
     transient_droplets=np.zeros(RunTimeInputs['DNum'], dtype=bool) # none initially transient
@@ -226,7 +226,7 @@ def MasoudEvaporate(RunTimeInputs):
     t        = RunTimeInputs['t']
     Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
-
+    RH       = RunTimeInputs['Ambient_RH']
     gone        = np.ones(RunTimeInputs['DNum'])==1
     alive       = np.ones(RunTimeInputs['DNum'])==1
     V           = np.ones(RunTimeInputs['DNum'])
@@ -234,11 +234,13 @@ def MasoudEvaporate(RunTimeInputs):
     r0_t        = np.empty((0,RunTimeInputs['DNum']), float)
     dVdt_t      = np.empty((0,RunTimeInputs['DNum']), float)
     t_i         = np.empty((0,1), float)
+    RH_t        = np.empty((0,1), float)
     theta_t     = np.empty((0,RunTimeInputs['DNum']), float)
     dVdt        = np.zeros(RunTimeInputs['DNum'], float)
     transient_length = RunTimeInputs['Transient_Length'] 
     gone_record = gone
-    alive_prev=deepcopy(alive)
+    alive_prev  = deepcopy(alive)
+
     #h0       =RunTimeInputs['h0']
     
     ## Setup plotting 
@@ -263,13 +265,13 @@ def MasoudEvaporate(RunTimeInputs):
     
     #CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot)
     centres=list(zip(list(xcentres),list(ycentres)))
-    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, RunTimeInputs['CA'], 997) # Using Hu & Larson 2002 eqn. 19
+    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, RunTimeInputs['CA'], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
     vmax1 = [0,90]
     vmax2 = [max(dVdt_iso*1000)/4,0]
     cmap1, normcmap1, collection1=vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
     cmap2, normcmap2, collection2=vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
     
-    residual=0;
+    residual=0
     ZERO=min(Vi)/10000 # IS THIS CORRECT???
     print("\tNumber of droplets = ", RunTimeInputs['DNum'])
     #print("\tr0 = ", r0)
@@ -297,7 +299,8 @@ def MasoudEvaporate(RunTimeInputs):
 
             Vprev       = deepcopy(Vi)
             #tic = time.perf_counter()
-            dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, theta, 997) # Using Hu & Larson 2002 eqn. 19
+
+            dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RH, r0, theta, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
             dVdt_new    = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
             
             #toc = time.perf_counter()
@@ -320,8 +323,19 @@ def MasoudEvaporate(RunTimeInputs):
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
-            
-            #writer.grab_frame()
+            if RunTimeInputs['box_volume']!=np.inf:
+                print("RH = ","{:.2f}".format(RH*100),"%")
+                RH_t    = np.vstack([RH_t, RH]) 
+                RH          = dpy.dynamic_humidity(RunTimeInputs['box_volume'],RunTimeInputs['molar_mass'],
+                                        RunTimeInputs['Antoine_coeffs'][0],
+                                        RunTimeInputs['Antoine_coeffs'][1],
+                                        RunTimeInputs['Antoine_coeffs'][2],
+                                        RunTimeInputs['Ambient_T'] +273.15, 
+                                        RunTimeInputs['rho_liquid'], np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
+
+            else:
+                RH = RunTimeInputs['Ambient_RH']
+            # writer.grab_frame()
             if RunTimeInputs['mode']=="CCR":
                 dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
                 dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt,r0, t)
@@ -338,6 +352,7 @@ def MasoudEvaporate(RunTimeInputs):
             
             transient_times[transient_droplets]=np.array([math.fsum([x,dt]) for x in transient_times[transient_droplets]])
             transient_droplets = transient_times<0 # update transient droplets
+            print("| "+str(t)+" ",end="", flush=True)
         
         gone        = Vi<ZERO
         alive_prev=deepcopy(alive)
@@ -387,6 +402,10 @@ def MasoudEvaporate(RunTimeInputs):
     MasoudResults["Time"]=t_i
     MasoudResults["Volume"]=V_t
     MasoudResults["dVdt"]=dVdt_t
+    if RunTimeInputs['box_volume']!=np.inf:
+        MasoudResults["Ambient_RH"]=RH_t
+    else:
+        MasoudResults["Ambient_RH"]=RunTimeInputs["Ambient_RH"]
     if (RunTimeInputs['mode'] == "CCR"):
         MasoudResults["Theta"] = theta_t
     elif (RunTimeInputs['mode'] == "CCA"):

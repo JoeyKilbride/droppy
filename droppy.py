@@ -233,26 +233,26 @@ def ReportResults(Results):
         ax_V.plot(Results['Time'], Results['Volume'][:,pdx]*1e6, label=name, marker="o")
         elem=list(np.nonzero(Results['Volume'][:,pdx]))[0][-1] # finds element where V is first zero.
         t_evap[pdx]=Results['Time'][elem]
-        print("evap time ", t_evap[pdx])
+        #print("evap time ", t_evap[pdx])
         dist_2_centre = np.sqrt((Results["RunTimeInputs"]["xcentres"][pdx]-xc)**2+(yc-Results["RunTimeInputs"]["ycentres"][pdx])**2)
         #ax_tevap.scatter(dist_2_centre,t_evap[pdx])
-        print("Inital Contact Angle: ", Results["RunTimeInputs"]["CA"][pdx])
-        print("Inital CX: ", Results["RunTimeInputs"]["xcentres"][pdx])
-        print(Results['Volume'][:,pdx]*1e6)
+        #print("Inital Contact Angle: ", Results["RunTimeInputs"]["CA"][pdx])
+        #print("Inital CX: ", Results["RunTimeInputs"]["xcentres"][pdx])
+        #print(Results['Volume'][:,pdx]*1e6)
         if Results['RunTimeInputs']['mode']=="CCR":
             ax_idx.plot(Results['Time'], Results['Theta'][:,pdx], label=name, marker="o")
         else:
             ax_idx.plot(Results['Time'], Results['Radius'][:,pdx], label=name, marker="o")
             
         ax_dVdt.plot(Results['Time'], Results['dVdt'][:,pdx]*1e6, label=name)
-    print("t_evap = ", t_evap)
+    #print("t_evap = ", t_evap)
     #print("Mean calculation time: ",mean(Results['Calc_Time']))
     #print("Total calculation time: ",sum(Results['Calc_Time']))
     s_dt = ax_dt.scatter(Results['RunTimeInputs']['xcentres'],Results['RunTimeInputs']['ycentres'],\
          c=normalise(t_evap), cmap='Spectral', vmin=0, vmax=1)
     ax_dt.set_aspect('equal', adjustable='box')
     fig_dt.colorbar(s_dt, ax=ax_dt,  orientation='horizontal')
-    print("Number of droplets: ",Results['RunTimeInputs']['DNum'])
+    #print("Number of droplets: ",Results['RunTimeInputs']['DNum'])
     ax_V.set_ylabel("V (\u03BC"+ "L)")
     ax_V.set_xlabel("Time (s)")
     if Results['RunTimeInputs']['DNum']<15:
@@ -278,7 +278,7 @@ def ReportResults(Results):
     Resultsfile.close()
     plt.show()
     return
-  
+
 def depositSquare(N,s,ca,Rb):
     # N, number of droplets NxN
     # s, separation (*Rb) 2=touching
@@ -545,6 +545,23 @@ def getIsolated(Temperature, H, Rb, CA, rho_liquid):
     dVdt_isolated=-(dmdt/rho_liquid) # m3/s - Convention is to have -dVdt as evaporation
     
     return dVdt_isolated
+
+def Psat(A,B,C,T):
+    """Saturation vapour pressure using the Antoine equation.
+        A,B,C: Antoine constants for fluid.
+        T: Temperature (oC)"""
+    psat = 10**(A-(B/(C+T)))
+    return psat
+
+def dynamic_humidity(box_volume,molar_mass,A,B,C,T,rho, V_evap):
+    psat = Psat(A,B,C,T-273.15)*(101325/760)
+    R = 8.314
+    molar_mass = 0.01801528 # kg/mol
+    n = (psat*box_volume)/(R*T)
+    msat = n*molar_mass
+    RH_rise = (rho*V_evap/1000)/msat
+    return RH_rise
+
 def saturation_vapour_density(T_k):
     """Saturation vapour density kg/m3 at temperature T (kelvin)."""
     return 0.0022*np.exp(77.345+0.0057*T_k-(7235/T_k))/T_k**9.2 # i think kgm-3

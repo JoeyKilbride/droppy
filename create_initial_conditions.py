@@ -31,13 +31,17 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['Filename']=filename       # what to call data (no exts)
     RunTimeInputs['Transient_Length']=c.TL   # delay before updating evap rate (s)
     RunTimeInputs['mode']=c.mode
+    RunTimeInputs['Antoine_coeffs'] = [c.A,c.B,c.C]
+    RunTimeInputs['box_volume'] = c.box_volume
+    RunTimeInputs['rho_liquid'] = c.rho_liquid
+    RunTimeInputs['molar_mass'] = c.molar_mass
     RunTimeInputs['Vi'] = dpy.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     
     return RunTimeInputs, c.saving, c.compare, c.cmap_name
 
 # ==================USER INPUTS============================================
 
-directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Initial_volume"
+directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Experiments/028"
 #saving = True
 #compare = False
 
@@ -60,6 +64,10 @@ directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Initia
         #      evaporation rate of the others
         # model : "Wray" or "Masoud" (some features unavailable with Wray)
         # mode : "CCA" or "CCR" (Constant Contact Angle or Constant Contact Radius)
+        # box_volume : volume of the box droplets are evaporating in. (=np.inf, for constant RH)
+        # rho_liquid : liquid density (kg/m^3)
+        # A,B,C : Antoine Coefficients for liquid
+        # molar_mass : molar mass of the liquid (kg/mol)
 
 for i in range(1):
     RunTimeInputs, saving, compare, cmap_name = create_initial_conditions(i,directory)
