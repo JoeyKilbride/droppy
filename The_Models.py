@@ -28,179 +28,6 @@ import Visualisation as vis
 # 
 # =============================================================================
 
-
-def WrayEvaporate(RunTimeInputs):
-    """Runs Wray et al. Model iteratively based on input parameters."""
-
-    #plt.close('all')
-    print("_____________________________________________")
-    print("Starting Parameters:")
-    print("_____________________________________________")
-      
-    # Ready the troops
-    xcentres =RunTimeInputs['xcentres']
-    ycentres =RunTimeInputs['ycentres']
-    r0       =RunTimeInputs['Rb']
-    Vi       =RunTimeInputs['Vi']
-    t        =RunTimeInputs['t']
-
-    gone     = np.ones(RunTimeInputs['DNum'])==1
-    alive    = np.ones(RunTimeInputs['DNum'])==1
-    V        = np.ones(RunTimeInputs['DNum'])
-    V_t      = np.empty((0,RunTimeInputs['DNum']), float)
-    dVdt_t   = np.empty((0,RunTimeInputs['DNum']), float)
-    t_i      = np.empty((0,1), float)
-    theta_t  = np.empty((0,RunTimeInputs['DNum']), float)
-    dVdt     = np.zeros(RunTimeInputs['DNum'], float)
-    Calc_Time= np.empty(0,float)
-    transient_length = RunTimeInputs['Transient_Length'] 
-
-    gone_record=gone
-    step_counter=0
-    
-    ## Setup plotting 
-    #metadata = dict(title='Movie Test', artist='Matplotlib',
-    #            comment='Movie support!')
-    #writer   = FFMpegWriter(fps=30, metadata=metadata)
-    #colors   = iter(matplotlib.cm.rainbow(np.linspace(0, 1, RunTimeInputs['DNum'])))
-    
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    plt.title("Droplet Layout")
-    # ax1.set_aspect(1)
-    # ax2.set_aspect(1)
-    # # xmax=max(xcentres)+max(r0)
-    # xmin=min(xcentres)-max(r0)
-    # ymax=max(ycentres)+max(r0)      s
-    # ymin=min(ycentres)-max(r0)
-    # ax1.set_xlim(xmin, xmax)
-    # ax1.set_ylim(ymin, ymax)
-    # ax2.set_xlim(xmin, xmax)
-    # ax2.set_ylim(ymin, ymax)
-
-    centres=list(zip(list(xcentres),list(ycentres)))
-    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
-    cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, 'gnuplot2_r', centres,r0, RunTimeInputs['CA']*(180/np.pi),0,90, True)
-    cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, 'seismic_r', centres,r0, np.zeros(RunTimeInputs['DNum']),max(-dVdt_iso)*-100,max(-dVdt_iso)*100, True)
-
-
-
-    #cmap, normcmap, collection=CreateDroplets(ax, fig, 'gnuplot2_r', xcentres, ycentres,r0, RunTimeInputs['CA']*(180/pi))
-    # UpdateDroplets(ax, cmap, normcmap, collection, RunTimeInputs['CA']*(180/pi), RunTimeInputs['t'])
-    # plt.pause(0.1)
-    residual=0
-    ZERO=min(Vi)/1000 # IS THIS CORRECT???
-    print("\tNumber of droplets = ", RunTimeInputs['DNum'])
-    #print("\tInitial Base Radius (m) = ", r0)
-    #print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
-    #print("\tInitial Contact Angle (\u00B0) = ", RunTimeInputs['CA']*(180/np.pi))
-    print("_____________________________________________")
-    dVdt_iso=dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], RunTimeInputs['Rb'], 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
-    #with writer.saving(fig, os.path.join(RunTimeInputs['directory'],RunTimeInputs['filename']+".avi"), 100):
-    transient_times = np.zeros(RunTimeInputs['DNum'])
-    transient_droplets=np.zeros(RunTimeInputs['DNum'], dtype=bool) # none initially transient
-    #print("transient_droplets", transient_droplets)
-    dVdt_last =dpy.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07) # Place holder for future declaration
-    while len(V[alive])>ZERO: # ?Can i make the Vi[alive] and remove the variable V?
-        
-        tic = time.perf_counter()
-        dVdt_new=dpy.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07)
-        toc = time.perf_counter()
-        Calc_Time = np.append(Calc_Time,toc-tic)
-        dVdt[alive]=deepcopy(dVdt_new) # update new evaporation rates for living droplets
-        dVdt[transient_droplets] = deepcopy(dVdt_last[transient_droplets])
-        dVdt = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
-        del_t=Vi[alive]/-dVdt[alive]
-        fastest=np.where(del_t[del_t>0]==np.min(del_t[del_t>0]))
-        dt_fastest=del_t[del_t>0][fastest][0] # first element - all should be the same (coof_var should reveal if not)
-        coof_var=np.std(del_t[del_t>0][fastest])/np.mean(del_t[del_t>0][fastest])
-        print("Coefficient of variance (should be low) = ",coof_var)
-        
-        if np.any(transient_times<0):
-            dt_transient=np.min(-transient_times[alive][transient_droplets[alive]]) # time till next transient period ends
-            i_del_t = np.min([dt_transient,dt_fastest]) # step smallest time step
-            t_transient=True
-        else:
-            i_del_t = dt_fastest
-            t_transient=False
-        #print("time_step_selected: ",i_del_t)
-        while not(np.any(Vi[alive] <= ZERO)):
-            #print("Transient_Droplets", transient_droplets)
-            #dVdt[transient_droplets] = dVdt_last[transient_droplets]
-            t_i = np.vstack([t_i, t])
-            V_t=np.vstack([V_t, Vi])# add new volumes to array
-            #print("V[235]=",Vi[235])
-            theta=dpy.GetCAfromV(Vi/1000, r0, ZERO)
-            theta_t=np.vstack([theta_t, theta*180/np.pi])
-            dVdt_t=np.vstack([dVdt_t, dVdt])# add new evap rates                
-            Vprev = deepcopy(Vi)
-            t=math.fsum([t,i_del_t]) # increment time
-            residual= residual+np.sum(Vi[np.where(Vi<ZERO)]) # sum overshoots
-            step_counter=step_counter+1 # 
-            print("Step ",str(step_counter)+", \u0394"+"t = (+",i_del_t,")s")
-
-            Vi = Vprev+(dVdt*i_del_t) # Reduce volume 
-            #print("Current Volume"+"(\u03BC"+ "L)=",Vi) 
-            #writer.grab_frame()
-            dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi, t)
-            dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt, t)
-            #writer.grab_frame()
-            #plt.pause(0.01)
-            
-            # delaying evaporation rate change
-            #transient_times[alive]=math.fsum([transient_times[alive],i_del_t])
-        
-            transient_times[transient_droplets]=np.array([math.fsum([x,i_del_t]) for x in transient_times[transient_droplets]])
-            transient_droplets = transient_times<0 # update transient droplets
-            #print("updated transient times: ",transient_times)
-            break
-        
-            
-
-            
-                
-        print("_____________________________________________")
-        print("Timestep Complete ...")
-        gone  = Vi<ZERO
-        alive = Vi>=ZERO
-        N_alive = len(Vi[alive])
-        dVdt_last=deepcopy(dVdt)
-        transient_droplets[gone]=np.zeros(RunTimeInputs['DNum']-N_alive, dtype=bool)# gone droplet are never transient
-        if not(t_transient) and transient_length>0:
-            transient_droplets[alive]=np.ones(N_alive, dtype=bool)
-            transient_times[alive] -= np.ones(N_alive)*transient_length # sum multiple transient periods
-        # if not(t_transient): # if droplets have evaporated then add transient
-        #     transient_times[gone] = np.zeros(RunTimeInputs['DNum']-N_alive)
-        #     transient_times[alive] -= np.ones(N_alive)*transient_length # sum multiple transient periods
-        #     print("min: ",min(transient_times), "max: ", max(transient_times))
-        #     transient_droplets = transient_times<0 # update transient droplets
-        # else:
-        #     transient_droples =  np.zeros(N_alive, dtype=bool) # must all now be non transient
-        print("\tNo. of alive droplets left: ", N_alive)
-        print("_____________________________________________")
-        Vi = np.where(Vi>=ZERO,Vi,0)
-        gone_record=np.vstack([gone_record, gone])
-        #print("Contact Angle (\u00B0)= ", theta*180/np.pi)
-        
-    V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
-    dVdt_t=np.vstack([dVdt_t, dVdt])# add new volumes to array
-    t_i = np.vstack([t_i, t]) # add final times to array
-    theta=dpy.GetCAfromV(Vi/1000, r0, ZERO)
-    theta_t=np.vstack([theta_t, theta*180/np.pi])
-    
-    print("_____________________________________________")
-    print("Residual Volume error (should=0)= ", residual)
-    print("Droplets took ",t/60, " mins to evaporate")
-    print("Completed in ", step_counter, "steps")
-    print("_____________________________________________")
-    
-    WrayResults={}
-    WrayResults["Time"]=t_i
-    WrayResults["Volume"]=V_t
-    WrayResults["Theta"]= theta_t
-    WrayResults["dVdt"]= dVdt_t
-    WrayResults["RunTimeInputs"]=RunTimeInputs
-    WrayResults["Calc_Time"]=Calc_Time    
-    return WrayResults
 #
 #
 #
@@ -415,6 +242,185 @@ def MasoudEvaporate(RunTimeInputs):
     #WrayResults["Calc_Time"]=Calc_Time
 
     return MasoudResults
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
 
+def WrayEvaporate(RunTimeInputs):
+    """Runs Wray et al. Model iteratively based on input parameters."""
 
+    #plt.close('all')
+    print("_____________________________________________")
+    print("Starting Parameters:")
+    print("_____________________________________________")
+      
+    # Ready the troops
+    xcentres =RunTimeInputs['xcentres']
+    ycentres =RunTimeInputs['ycentres']
+    r0       =RunTimeInputs['Rb']
+    Vi       =RunTimeInputs['Vi']
+    t        =RunTimeInputs['t']
+
+    gone     = np.ones(RunTimeInputs['DNum'])==1
+    alive    = np.ones(RunTimeInputs['DNum'])==1
+    V        = np.ones(RunTimeInputs['DNum'])
+    V_t      = np.empty((0,RunTimeInputs['DNum']), float)
+    dVdt_t   = np.empty((0,RunTimeInputs['DNum']), float)
+    t_i      = np.empty((0,1), float)
+    theta_t  = np.empty((0,RunTimeInputs['DNum']), float)
+    dVdt     = np.zeros(RunTimeInputs['DNum'], float)
+    Calc_Time= np.empty(0,float)
+    transient_length = RunTimeInputs['Transient_Length'] 
+
+    gone_record=gone
+    step_counter=0
     
+    ## Setup plotting 
+    #metadata = dict(title='Movie Test', artist='Matplotlib',
+    #            comment='Movie support!')
+    #writer   = FFMpegWriter(fps=30, metadata=metadata)
+    #colors   = iter(matplotlib.cm.rainbow(np.linspace(0, 1, RunTimeInputs['DNum'])))
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    plt.title("Droplet Layout")
+    # ax1.set_aspect(1)
+    # ax2.set_aspect(1)
+    # # xmax=max(xcentres)+max(r0)
+    # xmin=min(xcentres)-max(r0)
+    # ymax=max(ycentres)+max(r0)      s
+    # ymin=min(ycentres)-max(r0)
+    # ax1.set_xlim(xmin, xmax)
+    # ax1.set_ylim(ymin, ymax)
+    # ax2.set_xlim(xmin, xmax)
+    # ax2.set_ylim(ymin, ymax)
+
+    centres=list(zip(list(xcentres),list(ycentres)))
+    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+    cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, 'gnuplot2_r', centres,r0, RunTimeInputs['CA']*(180/np.pi),0,90, True)
+    cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, 'seismic_r', centres,r0, np.zeros(RunTimeInputs['DNum']),max(-dVdt_iso)*-100,max(-dVdt_iso)*100, True)
+
+
+
+    #cmap, normcmap, collection=CreateDroplets(ax, fig, 'gnuplot2_r', xcentres, ycentres,r0, RunTimeInputs['CA']*(180/pi))
+    # UpdateDroplets(ax, cmap, normcmap, collection, RunTimeInputs['CA']*(180/pi), RunTimeInputs['t'])
+    # plt.pause(0.1)
+    residual=0
+    ZERO=min(Vi)/1000 # IS THIS CORRECT???
+    print("\tNumber of droplets = ", RunTimeInputs['DNum'])
+    #print("\tInitial Base Radius (m) = ", r0)
+    #print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
+    #print("\tInitial Contact Angle (\u00B0) = ", RunTimeInputs['CA']*(180/np.pi))
+    print("_____________________________________________")
+    dVdt_iso=dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], RunTimeInputs['Rb'], 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+    #with writer.saving(fig, os.path.join(RunTimeInputs['directory'],RunTimeInputs['filename']+".avi"), 100):
+    transient_times = np.zeros(RunTimeInputs['DNum'])
+    transient_droplets=np.zeros(RunTimeInputs['DNum'], dtype=bool) # none initially transient
+    #print("transient_droplets", transient_droplets)
+    dVdt_last =dpy.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07) # Place holder for future declaration
+    while len(V[alive])>ZERO: # ?Can i make the Vi[alive] and remove the variable V?
+        
+        tic = time.perf_counter()
+        dVdt_new=dpy.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07)
+        toc = time.perf_counter()
+        Calc_Time = np.append(Calc_Time,toc-tic)
+        dVdt[alive]=deepcopy(dVdt_new) # update new evaporation rates for living droplets
+        dVdt[transient_droplets] = deepcopy(dVdt_last[transient_droplets])
+        dVdt = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
+        del_t=Vi[alive]/-dVdt[alive]
+        fastest=np.where(del_t[del_t>0]==np.min(del_t[del_t>0]))
+        dt_fastest=del_t[del_t>0][fastest][0] # first element - all should be the same (coof_var should reveal if not)
+        coof_var=np.std(del_t[del_t>0][fastest])/np.mean(del_t[del_t>0][fastest])
+        print("Coefficient of variance (should be low) = ",coof_var)
+        
+        if np.any(transient_times<0):
+            dt_transient=np.min(-transient_times[alive][transient_droplets[alive]]) # time till next transient period ends
+            i_del_t = np.min([dt_transient,dt_fastest]) # step smallest time step
+            t_transient=True
+        else:
+            i_del_t = dt_fastest
+            t_transient=False
+        #print("time_step_selected: ",i_del_t)
+        while not(np.any(Vi[alive] <= ZERO)):
+            #print("Transient_Droplets", transient_droplets)
+            #dVdt[transient_droplets] = dVdt_last[transient_droplets]
+            t_i = np.vstack([t_i, t])
+            V_t=np.vstack([V_t, Vi])# add new volumes to array
+            #print("V[235]=",Vi[235])
+            theta=dpy.GetCAfromV(Vi/1000, r0, ZERO)
+            theta_t=np.vstack([theta_t, theta*180/np.pi])
+            dVdt_t=np.vstack([dVdt_t, dVdt])# add new evap rates                
+            Vprev = deepcopy(Vi)
+            t=math.fsum([t,i_del_t]) # increment time
+            residual= residual+np.sum(Vi[np.where(Vi<ZERO)]) # sum overshoots
+            step_counter=step_counter+1 # 
+            print("Step ",str(step_counter)+", \u0394"+"t = (+",i_del_t,")s")
+
+            Vi = Vprev+(dVdt*i_del_t) # Reduce volume 
+            #print("Current Volume"+"(\u03BC"+ "L)=",Vi) 
+            #writer.grab_frame()
+            dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi, t)
+            dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt, t)
+            #writer.grab_frame()
+            #plt.pause(0.01)
+            
+            # delaying evaporation rate change
+            #transient_times[alive]=math.fsum([transient_times[alive],i_del_t])
+        
+            transient_times[transient_droplets]=np.array([math.fsum([x,i_del_t]) for x in transient_times[transient_droplets]])
+            transient_droplets = transient_times<0 # update transient droplets
+            #print("updated transient times: ",transient_times)
+            break
+        
+            
+
+            
+                
+        print("_____________________________________________")
+        print("Timestep Complete ...")
+        gone  = Vi<ZERO
+        alive = Vi>=ZERO
+        N_alive = len(Vi[alive])
+        dVdt_last=deepcopy(dVdt)
+        transient_droplets[gone]=np.zeros(RunTimeInputs['DNum']-N_alive, dtype=bool)# gone droplet are never transient
+        if not(t_transient) and transient_length>0:
+            transient_droplets[alive]=np.ones(N_alive, dtype=bool)
+            transient_times[alive] -= np.ones(N_alive)*transient_length # sum multiple transient periods
+        # if not(t_transient): # if droplets have evaporated then add transient
+        #     transient_times[gone] = np.zeros(RunTimeInputs['DNum']-N_alive)
+        #     transient_times[alive] -= np.ones(N_alive)*transient_length # sum multiple transient periods
+        #     print("min: ",min(transient_times), "max: ", max(transient_times))
+        #     transient_droplets = transient_times<0 # update transient droplets
+        # else:
+        #     transient_droples =  np.zeros(N_alive, dtype=bool) # must all now be non transient
+        print("\tNo. of alive droplets left: ", N_alive)
+        print("_____________________________________________")
+        Vi = np.where(Vi>=ZERO,Vi,0)
+        gone_record=np.vstack([gone_record, gone])
+        #print("Contact Angle (\u00B0)= ", theta*180/np.pi)
+        
+    V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
+    dVdt_t=np.vstack([dVdt_t, dVdt])# add new volumes to array
+    t_i = np.vstack([t_i, t]) # add final times to array
+    theta=dpy.GetCAfromV(Vi/1000, r0, ZERO)
+    theta_t=np.vstack([theta_t, theta*180/np.pi])
+    
+    print("_____________________________________________")
+    print("Residual Volume error (should=0)= ", residual)
+    print("Droplets took ",t/60, " mins to evaporate")
+    print("Completed in ", step_counter, "steps")
+    print("_____________________________________________")
+    
+    WrayResults={}
+    WrayResults["Time"]=t_i
+    WrayResults["Volume"]=V_t
+    WrayResults["Theta"]= theta_t
+    WrayResults["dVdt"]= dVdt_t
+    WrayResults["RunTimeInputs"]=RunTimeInputs
+    WrayResults["Calc_Time"]=Calc_Time    
+    return WrayResults
