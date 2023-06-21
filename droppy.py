@@ -220,6 +220,19 @@ def load_MDTM_pickle(directory, prefix=None):
     return input_dict
 
 # Visualisation functions **************************************************
+
+def add_bias(xb,yb,x,y, bias_gradient):
+    b_ang = np.arctan2(yb,xb)
+    theta_2 = np.arctan2(y,x)
+    theta_1 = (b_ang-theta_2)
+
+    rd = get_radial_position(x, y, 0, 0) # distance to droplet
+    bd = rd*np.cos(theta_1) # distance along bias direction
+    radial_bias = np.sqrt(xb**2+yb**2)
+    mb = (-bias_gradient/radial_bias)
+    bias = (bd*mb)+1
+    return b_ang, mb, bias[0]
+
 def UpdateDroplets(ax,cmap, normcmap, collection, dyn_var, radii, t):
     ax.set_title('{:.3e}'.format(t))
     clr=[]
@@ -305,6 +318,7 @@ def ReportResults(Results):
     plt.show()
     return
 
+
 def depositSquare(N,s,ca,Rb):
     # N, number of droplets NxN
     # s, separation (*Rb) 2=touching
@@ -388,7 +402,6 @@ def depositTriangle_NOTWORKING(N,s,ca,Rb):
     return xcentres, ycentres, contact_angle, base_radius
 
 # Spherical cap geometry functions ***********************************************
-
 
 def GetVolumeCA(CA, r_base):
     """Calculates volume of a spherical cap from Contact angle (rads)

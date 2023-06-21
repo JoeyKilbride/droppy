@@ -30,6 +30,8 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['Directory']=directory     # where to save data (absolute, no trailing \)
     RunTimeInputs['Filename']=filename       # what to call data (no exts)
     RunTimeInputs['Transient_Length']=c.TL   # delay before updating evap rate (s)
+    RunTimeInputs['bias_point']= c.bp        # xy coords of last point in array to evaporate 1D np array
+    RunTimeInputs['bias_grad'] = c.bg
     RunTimeInputs['mode']=c.mode
     RunTimeInputs['Antoine_coeffs'] = [c.A,c.B,c.C]
     RunTimeInputs['box_volume'] = c.box_volume
@@ -41,7 +43,7 @@ def create_initial_conditions(val, directory):
 
 # ==================USER INPUTS============================================
 
-directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Experiments/028"
+directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Experiments/unheated/010"
 #saving = True
 #compare = False
 
@@ -83,6 +85,9 @@ for i in range(1):
     if compare:
         eResults = dpy.load_MDL_pickle(RunTimeInputs['Directory'])
         vis.Compare2Data(Results, eResults, cmap_name)
+        print("bias angle  = ",Results['bias_angle'])
+        print("bias gradient  = ",Results['bias_grad'])
+        
     
 # =============================================================================
 
