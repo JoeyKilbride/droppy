@@ -43,7 +43,7 @@ def create_initial_conditions(val, directory):
 
 # ==================USER INPUTS============================================
 
-directory = r"/Volumes/ERD160_projects$/aaaa_Joey/Large Arrays/Convection/Experiments/unheated/010"
+directory = input('Enter a file path: ')
 #saving = True
 #compare = False
 
