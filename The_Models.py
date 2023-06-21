@@ -111,6 +111,14 @@ def MasoudEvaporate(RunTimeInputs):
     transient_times = np.zeros(RunTimeInputs['DNum'])
     transient_droplets=np.zeros(RunTimeInputs['DNum'], dtype=bool) # none initially transient
     dVdt_transient=np.zeros(RunTimeInputs['DNum'])
+
+    if ((RunTimeInputs['bias_point'] is None) or (RunTimeInputs['bias_grad'] is None)):
+        b_ang=None
+        mb = 0
+        bias = np.ones(len(xcentres))
+    else:
+        b_ang, mb, bias = dpy.add_bias(RunTimeInputs['bias_point'][0]/1000, RunTimeInputs['bias_point'][1]/1000, xcentres[alive], ycentres[alive], RunTimeInputs['bias_grad'])
+    
     while len(V[alive])>0: # ?Can i make the Vi[alive] and remove the variable V?
         
         print("___________________Remaining Evaporating____________________")
@@ -129,17 +137,11 @@ def MasoudEvaporate(RunTimeInputs):
 
             dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RH, r0, theta, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
             dVdt_new    = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
-            if (RunTimeInputs['bias_point']==None or RunTimeInputs['bias_grad']==None):
-                b_ang=None
-                mb = 0
-                bias = np.ones(len(dVdt_new))
-            else:
-                b_ang, mb, bias = dpy.add_bias(RunTimeInputs['bias_point'][0]/1000, RunTimeInputs['bias_point'][1]/1000, xcentres[alive], ycentres[alive], RunTimeInputs['bias_grad'])
-            
+
             #toc = time.perf_counter()
             #Calc_Time[step_counter]=toc-tic
             #dVdt_WF     = WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07)
-            dVdt[alive] = deepcopy(dVdt_new*bias) # update new evaporation rates for living droplets 
+            dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets 
             dVdt        = np.where(Vi!=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
             
             if np.sum(transient_droplets)>0: # if any transient droplets
