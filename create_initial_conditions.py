@@ -81,7 +81,7 @@ for i in range(1):
         print("\nInvalid model name.")
         break
     if saving:
-        dpy.ReportResults(Results)
+        dpy.ReportResults(Results, cmap_name)
     if compare:
         eResults = dpy.load_MDL_pickle(RunTimeInputs['Directory'])
         vis.Compare2Data(Results, eResults, cmap_name)

@@ -249,7 +249,7 @@ def get_cmap(n, name='prism'):
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
     
-def ReportResults(Results):
+def ReportResults(Results, cmap_name):
     """Plots graphics from the evaportion data."""
     plt.close('all')
     fig_V = plt.figure()
@@ -288,7 +288,7 @@ def ReportResults(Results):
     #print("Mean calculation time: ",mean(Results['Calc_Time']))
     #print("Total calculation time: ",sum(Results['Calc_Time']))
     s_dt = ax_dt.scatter(Results['RunTimeInputs']['xcentres'],Results['RunTimeInputs']['ycentres'],\
-         c=normalise(t_evap), cmap='Spectral', vmin=0, vmax=1)
+         c=normalise(t_evap), cmap=cmap_name, vmin=0, vmax=1)
     ax_dt.set_aspect('equal', adjustable='box')
     fig_dt.colorbar(s_dt, ax=ax_dt,  orientation='horizontal')
     #print("Number of droplets: ",Results['RunTimeInputs']['DNum'])
