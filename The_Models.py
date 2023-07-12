@@ -62,6 +62,7 @@ def MasoudEvaporate(RunTimeInputs):
     dVdt_t      = np.empty((0,RunTimeInputs['DNum']), float)
     t_i         = np.empty((0,1), float)
     RH_t        = np.empty((0,1), float)
+    ceq_t        = np.empty((0,2), float)
     theta_t     = np.empty((0,RunTimeInputs['DNum']), float)
     dVdt        = np.zeros(RunTimeInputs['DNum'], float)
     transient_length = RunTimeInputs['Transient_Length'] 
@@ -75,7 +76,12 @@ def MasoudEvaporate(RunTimeInputs):
     #            comment='Movie support!')
     #writer = FFMpegWriter(fps=30, metadata=metadata)
     #colors = iter(matplotlib.cm.rainbow(np.linspace(0, 1, RunTimeInputs['DNum'])))
-    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig = plt.figure()
+
+    gs = fig.add_gridspec(2,2)
+    ax1 = fig.add_subplot(gs[1, 0])
+    ax2 = fig.add_subplot(gs[1, 1])
+    ax3 = fig.add_subplot(gs[0, :])
     plt.title("Droplet Layout")
     # ax1.set_aspect(1)
     # ax2.set_aspect(1)
@@ -88,15 +94,15 @@ def MasoudEvaporate(RunTimeInputs):
     # ax2.set_xlim(xmin, xmax)
     # ax2.set_ylim(ymin, ymax)
     cmtype1='gnuplot2_r'
-    cmtype2='hot'
+    cmtype2='RdYlGn'
     
     #CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot)
     centres=list(zip(list(xcentres),list(ycentres)))
     dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, RunTimeInputs['CA'], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
     vmax1 = [0,90]
-    vmax2 = [max(dVdt_iso*1000)/4,0]
-    cmap1, normcmap1, collection1=vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
-    cmap2, normcmap2, collection2=vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
+    vmax2 = [max(dVdt_iso*1000)/10,-max(dVdt_iso*1000)/10]
+    cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
+    cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
     
     residual=0
     ZERO=min(Vi)/10000 # IS THIS CORRECT???
@@ -135,8 +141,14 @@ def MasoudEvaporate(RunTimeInputs):
             Vprev       = deepcopy(Vi)
             #tic = time.perf_counter()
 
-            dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RH, r0, theta, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
-            dVdt_new    = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
+            
+            pflat         = dpy.Psat(RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Antoine_coeffs'][1], RunTimeInputs['Antoine_coeffs'][2], RunTimeInputs['Ambient_T'])
+            p_eq, pk, pR  = dpy.kohler(0,RunTimeInputs['molar_mass'],RunTimeInputs['surface_tension'],RunTimeInputs['Ambient_T'],RunTimeInputs['rho_liquid'],r0)
+            ceq           = dpy.ideal_gas_law(p_eq*pflat, RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
+            camb          = np.nanmin(ceq)*RH
+            #camb          = dpy.ideal_gas_law(np.min(ceq), RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
+            dVdt_iso      = dpy.getIsolated(RunTimeInputs['Ambient_T'], ceq-camb, r0, theta, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+            dVdt_new      = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
 
             #toc = time.perf_counter()
             #Calc_Time[step_counter]=toc-tic
@@ -157,19 +169,27 @@ def MasoudEvaporate(RunTimeInputs):
             dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
+            ax3.scatter(t,np.sum(Vi), color = 'k')
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
                 print("RH = ","{:.2f}".format(RH*100),"%")
-                RH_t    = np.vstack([RH_t, RH]) 
+                RH_t    = np.vstack([RH_t, RH])
+                mmceq = np.array([np.nanmin(ceq),np.nanmax(ceq)])/camb
+                ceq_t = np.vstack([ceq_t,mmceq]) 
                 RH          = dpy.dynamic_humidity(RunTimeInputs['box_volume'],RunTimeInputs['molar_mass'],
                                         RunTimeInputs['Antoine_coeffs'][0],
                                         RunTimeInputs['Antoine_coeffs'][1],
                                         RunTimeInputs['Antoine_coeffs'][2],
                                         RunTimeInputs['Ambient_T'] +273.15, 
                                         RunTimeInputs['rho_liquid'], np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
-
-            else:
-                RH = RunTimeInputs['Ambient_RH']
+                RH = RH-(RunTimeInputs['vapour_sink_rate']/60)
+                # ax3.scatter(t,RH, label="Ambient", c='k')
+                # ax3.scatter(t,mmceq[0], label="droplet min", c='b')
+                # ax3.scatter(t,mmceq[1], label="droplet max", c='g')
+                
+                
+            #else:
+                #RH = RunTimeInputs['Ambient_RH']
             # writer.grab_frame()
             if RunTimeInputs['mode']=="CCR":
                 dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
@@ -177,8 +197,10 @@ def MasoudEvaporate(RunTimeInputs):
             else:
                 ax1.clear()
                 ax2.clear()
-                vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
-                vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
+                dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
+                if (t == dt): # first time step
+                    vmax2= [-np.abs(np.max(dVdt)),np.abs(np.max(dVdt))]
+                dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
                 plt.pause(0.001)
             #writer.grab_frame()
             
@@ -206,6 +228,8 @@ def MasoudEvaporate(RunTimeInputs):
         print("Droplets have evaporated, updating matrix ...")
         print("\tNo. of alive droplets left: ", len(Vi[alive]))
         print("_____________________________________________")
+        if (len(Vi[alive])==1):
+            break
     
     loop_end=timeit.default_timer()
     print("Loop ran for: ",loop_end-loop_start)
@@ -223,8 +247,8 @@ def MasoudEvaporate(RunTimeInputs):
         # update final plot
         ax1.clear()
         ax2.clear()
-        vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
-        vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
+        dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
+        dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
         plt.pause(0.001)
 
     dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
@@ -241,6 +265,7 @@ def MasoudEvaporate(RunTimeInputs):
     MasoudResults["bias_angle"]=b_ang
     if RunTimeInputs['box_volume']!=np.inf:
         MasoudResults["Ambient_RH"]=RH_t
+        MasoudResults["vapour_pressures"]=ceq_t
     else:
         MasoudResults["Ambient_RH"]=RunTimeInputs["Ambient_RH"]
     if (RunTimeInputs['mode'] == "CCR"):

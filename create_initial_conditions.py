@@ -5,8 +5,6 @@ import The_Models as mod
 import sys
 #sys.path.insert(0, r'\\NTU-DPM-CTY.ads.ntu.ac.uk\ERD160_projects$\aaaa_Joey\Scripts') # Windows
 sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/') # Mac
-print("path:", sys.path)
-import Visualisation as vis
 
 def create_initial_conditions(val, directory):
     """Function for writing dictionary initial conditions for Wray or Masoud 
@@ -37,6 +35,8 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['box_volume'] = c.box_volume
     RunTimeInputs['rho_liquid'] = c.rho_liquid
     RunTimeInputs['molar_mass'] = c.molar_mass
+    RunTimeInputs['surface_tension'] = c.sigma
+    RunTimeInputs['vapour_sink_rate'] = c.leak
     RunTimeInputs['Vi'] = dpy.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     
     return RunTimeInputs, c.saving, c.compare, c.cmap_name
@@ -84,7 +84,7 @@ for i in range(1):
         dpy.ReportResults(Results, cmap_name)
     if compare:
         eResults = dpy.load_MDL_pickle(RunTimeInputs['Directory'])
-        vis.Compare2Data(Results, eResults, cmap_name)
+        dpy.Compare2Data(Results, eResults, cmap_name)
         print("bias angle  = ",Results['bias_angle'])
         print("bias gradient  = ",Results['bias_grad'])
         
