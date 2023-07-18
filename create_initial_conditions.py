@@ -4,7 +4,7 @@ import numpy as np
 import The_Models as mod
 import sys
 #sys.path.insert(0, r'\\NTU-DPM-CTY.ads.ntu.ac.uk\ERD160_projects$\aaaa_Joey\Scripts') # Windows
-sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/') # Mac
+#sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/') # Mac
 
 def create_initial_conditions(val, directory):
     """Function for writing dictionary initial conditions for Wray or Masoud 
@@ -28,8 +28,11 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['Directory']=directory     # where to save data (absolute, no trailing \)
     RunTimeInputs['Filename']=filename       # what to call data (no exts)
     RunTimeInputs['Transient_Length']=c.TL   # delay before updating evap rate (s)
-    RunTimeInputs['bias_point']= c.bp        # xy coords of last point in array to evaporate 1D np array
-    RunTimeInputs['bias_grad'] = c.bg
+    RunTimeInputs['t_drop']=c.t_drop
+    RunTimeInputs['bias_type']=c.bias_type      
+    if (c.bias_type=="linear"):
+        RunTimeInputs['bias_point']= c.bp        # xy coords of last point in array to evaporate 1D np array
+        RunTimeInputs['bias_grad'] = c.bg
     RunTimeInputs['mode']=c.mode
     RunTimeInputs['Antoine_coeffs'] = [c.A,c.B,c.C]
     RunTimeInputs['box_volume'] = c.box_volume
@@ -37,9 +40,10 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['molar_mass'] = c.molar_mass
     RunTimeInputs['surface_tension'] = c.sigma
     RunTimeInputs['vapour_sink_rate'] = c.leak
+    RunTimeInputs['timesteps'] = c.timesteps
     RunTimeInputs['Vi'] = dpy.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     
-    return RunTimeInputs, c.saving, c.compare, c.cmap_name
+    return RunTimeInputs, c.saving, c.compare, c.cmap_name, c.live_plot
 
 # ==================USER INPUTS============================================
 
@@ -72,11 +76,11 @@ directory = input('Enter a file path: ')
         # molar_mass : molar mass of the liquid (kg/mol)
 
 for i in range(1):
-    RunTimeInputs, saving, compare, cmap_name = create_initial_conditions(i,directory)
+    RunTimeInputs, saving, compare, cmap_name, lp = create_initial_conditions(i,directory)
     if RunTimeInputs['model'] == "Wray":
         Results = mod.WrayEvaporate(RunTimeInputs)
     elif RunTimeInputs['model'] == "Masoud":
-        Results = mod.MasoudEvaporate(RunTimeInputs)
+        Results = mod.MasoudEvaporate(RunTimeInputs, lp)
     else:
         print("\nInvalid model name.")
         break

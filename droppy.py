@@ -233,7 +233,7 @@ def load_MDTM_pickle(directory, prefix=None):
 
 # Visualisation functions **************************************************
 
-def add_bias(xb,yb,x,y, bias_gradient):
+def add_bias_linear(xb,yb,x,y, bias_gradient):
     b_ang = np.arctan2(yb,xb)
     theta_2 = np.arctan2(y,x)
     theta_1 = (b_ang-theta_2)
@@ -244,6 +244,14 @@ def add_bias(xb,yb,x,y, bias_gradient):
     mb = (-bias_gradient/radial_bias)
     bias = (bd*mb)+1
     return b_ang, mb, bias[0]
+
+def add_bias_periodic(x,y):
+    rd = np.abs(get_radial_position(x, y, np.mean(x), np.mean(y))) # distance to droplet
+    Rby2 = ((np.max(x)-np.min(x))/2)
+    m_flat = (abs(2/np.sqrt(3))-1)/Rby2
+    bias = -m_flat*np.sqrt(np.max(rd)**2-rd**2) + ((Rby2)*(m_flat))
+
+    return (-1*bias)+1
 
 def UpdateDroplets(ax,cmap, normcmap, collection, dyn_var, radii, t):
     ax.set_title('{:.3e}'.format(t))
@@ -357,8 +365,10 @@ def CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot):
     s = ax.add_collection(collection)
     cs=list(zip(*centres))
     mr=max(r0)
-    ax.set_xlim(min(cs[0])-mr, max(cs[0])+mr)
-    ax.set_ylim(min(cs[1])-mr, max(cs[1])+mr)  
+    # ax.set_xlim(min(cs[0])-mr, max(cs[0])+mr)
+    # ax.set_ylim(min(cs[1])-mr, max(cs[1])+mr)
+    ax.set_xlim([0.0005894016287029388-mr, (0.0005894016287029388*2)+mr])
+    ax.set_ylim([0.0004661867107281955-mr, (0.0004661867107281955*2)+mr])
     #fig.colorbar(s, ax=ax, cax=ax, orientation='horizontal')
     if multiplot==True:
         cax, cbar_kwds = matplotlib.colorbar.make_axes(ax, location = 'bottom')#,
