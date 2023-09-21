@@ -62,11 +62,13 @@ def MasoudEvaporate(RunTimeInputs, lp):
     RH_t        = np.empty((0,1), float)
     ceq_t        = np.empty((0,2), float)
     theta_t     = np.empty((0,RunTimeInputs['DNum']), float)
+    dVdt1        = np.zeros(RunTimeInputs['DNum'], float)
+    dVdt2        = np.zeros(RunTimeInputs['DNum'], float)
     dVdt        = np.zeros(RunTimeInputs['DNum'], float)
     transient_length = RunTimeInputs['Transient_Length'] 
     gone_record = gone
     alive_prev  = deepcopy(alive)
-
+    RH = RunTimeInputs['Ambient_RH']
     #h0       =RunTimeInputs['h0']
     
     ## Setup plotting 
@@ -75,8 +77,14 @@ def MasoudEvaporate(RunTimeInputs, lp):
     #writer = FFMpegWriter(fps=30, metadata=metadata)
     #colors = iter(matplotlib.cm.rainbow(np.linspace(0, 1, RunTimeInputs['DNum'])))
     centres=list(zip(list(xcentres),list(ycentres)))
-    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, RunTimeInputs['CA'], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
-
+    if RunTimeInputs['Ambient_RH'] == "iterative":
+        RH=1.0
+        dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RH, r0, RunTimeInputs['CA'], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+    elif RunTimeInputs['Ambient_RH']=="saturation":
+        RH=1.0
+        dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RH, r0, RunTimeInputs['CA'], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+    else: 
+        dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RH, r0, RunTimeInputs['CA'], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
     fig = plt.figure()
 
     
@@ -131,7 +139,13 @@ def MasoudEvaporate(RunTimeInputs, lp):
     elif (RunTimeInputs['bias_type'] == "periodic"):
         bias = dpy.add_bias_periodic(xcentres, ycentres)
     
-
+    pflat         = dpy.Psat(RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Antoine_coeffs'][1], RunTimeInputs['Antoine_coeffs'][2], RunTimeInputs['Ambient_T'])
+    p_eq, pk, pR  = dpy.kohler(0,RunTimeInputs['molar_mass'],RunTimeInputs['surface_tension'],RunTimeInputs['Ambient_T'],RunTimeInputs['rho_liquid'],r0[alive])
+    cflat           = dpy.ideal_gas_law(pflat, RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
+    ceq           = dpy.ideal_gas_law(p_eq*pflat, RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
+    camb          = RH*cflat
+    phi_inv     = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], theta[alive])
+    #RH = camb/cflat
     while len(V[alive])>0: # ?Can i make the Vi[alive] and remove the variable V?
         
         print("___________________Remaining Evaporating____________________")
@@ -142,30 +156,84 @@ def MasoudEvaporate(RunTimeInputs, lp):
                 #print("Contact Angle (\u00B0)= ", theta*180/np.pi)
             elif (RunTimeInputs['mode'] == "CCA"):
                 r0 = dpy.GetBase(theta, Vi/1000)
-                #print("Base radius (m)= ", r0)
-                         
-
+                #print("Base radius (m)= ", r0)            
             Vprev       = deepcopy(Vi)
-            #tic = time.perf_counter()
 
-            pflat         = dpy.Psat(RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Antoine_coeffs'][1], RunTimeInputs['Antoine_coeffs'][2], RunTimeInputs['Ambient_T'])
-            p_eq, pk, pR  = dpy.kohler(0,RunTimeInputs['molar_mass'],RunTimeInputs['surface_tension'],RunTimeInputs['Ambient_T'],RunTimeInputs['rho_liquid'],r0[alive])
-            ceq           = dpy.ideal_gas_law(p_eq*pflat, RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
-            camb          = np.nanmin(ceq)*RH
-            #camb          = dpy.ideal_gas_law(RH*pflat, RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
-            dVdt_iso      = dpy.getIsolated(RunTimeInputs['Ambient_T'], ceq-camb, r0[alive], theta[alive], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
-            dVdt_new      = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso, theta[alive])
-
-            #toc = time.perf_counter()
-            #Calc_Time[step_counter]=toc-tic
-            #dVdt_WF     = WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07)
-            dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets 
+            if RunTimeInputs['Ambient_RH'] == "iterative":
+                p_eq, pk, pR  = dpy.kohler(0,RunTimeInputs['molar_mass'],RunTimeInputs['surface_tension'],RunTimeInputs['Ambient_T'],RunTimeInputs['rho_liquid'],r0[alive])
+                
+                ceq           = dpy.ideal_gas_law(p_eq*pflat, RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
+                camb          = np.nanmin(ceq)*RH
+                phi_inv     = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], theta[alive])
+                index = RunTimeInputs['index']
+                target = RunTimeInputs['target']
+                
+                print(" = ", )
+                dVdt_iso      = dpy.getIsolated(RunTimeInputs['Ambient_T'], ceq-camb, r0[alive], theta[alive], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+                dVdt_new = np.dot(phi_inv,dVdt_iso)*1000
+                dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets
+                print("dVdt[index] = ", dVdt[index])
+                if np.abs((dVdt[index]-target)/target)*100>1:    
+                    print("RH out of range")  
+                    ll=0
+                    ul=2.0
+                    steps = np.linspace(ll,ul,20)
+                    ds = (steps[1]-steps[0])
+                    for RH in steps[:-1]:
+                        RH1 = RH
+                        RH2 = RH+ds
+                        
+                        camb1          = np.nanmin(ceq)*RH1
+                        camb2          = np.nanmin(ceq)*RH2
+                        #camb          = dpy.ideal_gas_law(RH*pflat, RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
+                        dVdt1_iso      = dpy.getIsolated(RunTimeInputs['Ambient_T'], ceq-camb1, r0[alive], theta[alive], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+                        dVdt2_iso      = dpy.getIsolated(RunTimeInputs['Ambient_T'], ceq-camb2, r0[alive], theta[alive], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+                        
+                        dVdt1_new = np.dot(phi_inv,dVdt1_iso)*1000 # L/s
+                        dVdt2_new = np.dot(phi_inv,dVdt2_iso)*1000 # L/s
+                        dVdt1[alive] = deepcopy(dVdt1_new*bias[alive]) # update new evaporation rates for living droplets 
+                        dVdt2[alive] = deepcopy(dVdt2_new*bias[alive]) # update new evaporation rates for living droplets 
+                        
+                        if dVdt1[index]<target and dVdt2[index]>target:
+                            print("RH between: ", RH1, " and ", RH2)
+                            break
+                    ds = ds/2
+                    if dVdt[index]<target:
+                        RH = RH1
+                    else:
+                        RH = RH2
+                    while np.abs((dVdt[index]-target)/target)*100>1: 
+                        if dVdt[index]<target: # evaporating too fast
+                            RH = RH + ds # try higher humidity 
+                        else: # evaporating too slowly
+                            RH = RH - ds # try lower humidity
+                        print("refining RH: ", RH)
+                        camb         = np.nanmin(ceq)*RH
+                        dVdt_iso      = dpy.getIsolated(RunTimeInputs['Ambient_T'], ceq-camb, r0[alive], theta[alive], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+                        dVdt_new      = np.dot(phi_inv,dVdt_iso)*1000 # L/s
+                        dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets 
+                        ds = ds/2
+                    
+                print("RH = ", RH)
+                print("within: ", np.abs((dVdt[index]-target)/target)*100, "% of target")
+                print("dVdt[index] = ", dVdt[index])
+            else:
+                #camb         = np.nanmin(ceq)*RH
+                phi_inv     = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], theta[alive])
+                p_eq, pk, pR  = dpy.kohler(0,RunTimeInputs['molar_mass'],RunTimeInputs['surface_tension'],RunTimeInputs['Ambient_T'],RunTimeInputs['rho_liquid'],r0[alive])
+                ceq           = dpy.ideal_gas_law(p_eq*pflat, RunTimeInputs['Ambient_T'], RunTimeInputs['molar_mass'])
+                dVdt_iso      = dpy.getIsolated(RunTimeInputs['Ambient_T'], ceq-(RH*cflat), r0[alive], theta[alive], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+                dVdt_new      = np.dot(phi_inv,dVdt_iso)*1000 # L/s
+                
+                dVdt[alive] = deepcopy(dVdt_new*bias[alive])
+                
             dVdt        = np.where(Vi!=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
-            print("**********Indexed droplet: ",dVdt[(126-1)+(4*354)])
             if np.sum(transient_droplets)>0: # if any transient droplets
-                dVdt_transient[alive_prev]    = dpy.Masoud(xcentres[alive_prev], 
-                                               ycentres[alive_prev], r0[alive_prev], 
-                                               dVdt_iso[alive_prev], theta[alive_prev])
+                phi_inv_t = dpy.Masoud(xcentres[alive_prev], 
+                                               ycentres[alive_prev], r0[alive_prev]
+                                               , theta[alive_prev])
+                
+                dVdt_transient[alive_prev] = np.dot(phi_inv_t, dVdt_iso[alive_prev])*1000
                 dVdt[transient_droplets] = deepcopy(dVdt_transient[transient_droplets])
             t_i     = np.vstack([t_i, t]) # record time steps
             V_t     = np.vstack([V_t, Vi]) # add new volumes to array
@@ -178,7 +246,7 @@ def MasoudEvaporate(RunTimeInputs, lp):
             
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
-                print("RH = ","{:.2f}".format(RH*100),"%")
+                print("RH = ","{:.10f}".format(RH*100),"%")
                 RH_t    = np.vstack([RH_t, RH])
                 mmceq = np.array([np.nanmin(ceq),np.nanmax(ceq)])/camb
                 ceq_t = np.vstack([ceq_t,mmceq]) 
@@ -256,6 +324,7 @@ def MasoudEvaporate(RunTimeInputs, lp):
             # update final plot
             dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
             dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt,r0, t)
+            
         elif (RunTimeInputs['mode'] == "CCA"):
             r0 = dpy.GetBase(theta, Vi/1000)
             r0_t    = np.vstack([r0_t, r0])

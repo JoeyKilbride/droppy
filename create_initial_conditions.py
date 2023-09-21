@@ -22,6 +22,10 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['ycentres']=c.CY           # as 1D np array
     RunTimeInputs['DNum']=len(c.CX)          # total number of droplets in array
     RunTimeInputs['Ambient_RH']=c.Ambient_RH # Fraction [0-1]
+    if c.Ambient_RH == "iterative":
+        RunTimeInputs['index']=c.index
+        RunTimeInputs['target']=c.target
+        RunTimeInputs['RH_iterations']=c.RH_iterations
     RunTimeInputs['Ambient_T']=c.Ambient_T   # Degrees C
     RunTimeInputs['t']=c.t                   # initial time (s)
     RunTimeInputs['model']=c.model           # which model to simulate with "Wray" or "Masoud"
@@ -60,7 +64,7 @@ directory = input('Enter a file path: ')
     # Droplet array geometries (numpy arrays)
         # CX,CY : droplet centre coordinates
         # CA,Rb : droplet initial contact angles and base radii
-    # Environment:
+    # Environment:x
         # Ambient_RH : Ambient relative humidity (0-1)
         # Ambient_T : Ambient temperature (degrees C)
     # Simulation parameters
