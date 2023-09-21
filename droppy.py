@@ -184,7 +184,8 @@ def load_MDL_pickle(directory, prefix=None):
         if prefix==None:
             prefix = "MDL_*.pkl"
         else:
-            prefix = prefix[:4]+ ".pkl"
+            prefix = prefix[:4]+"*"+ ".pkl"
+        print(prefix)
         target = glob.glob(os.path.join(directory,prefix))[0]        
         if os.path.getsize(target)>0:
             with open(target, 'rb') as handle:
@@ -352,7 +353,7 @@ def CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot):
     normcmap = colors.Normalize(vmin=vmin, vmax=vmax)
     #normcmap = matplotlib.colors.Normalize(vmin=np.min([C.min(),C.min()]), vmax=np.max([C.max(),C.max()]))
     ax.set_aspect(1)
-
+    
     lst=[]
     clr=[]
     for idx, centre in enumerate(centres): 
@@ -365,10 +366,9 @@ def CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot):
     s = ax.add_collection(collection)
     cs=list(zip(*centres))
     mr=max(r0)
-    # ax.set_xlim(min(cs[0])-mr, max(cs[0])+mr)
-    # ax.set_ylim(min(cs[1])-mr, max(cs[1])+mr)
-    ax.set_xlim([0.0005894016287029388-mr, (0.0005894016287029388*2)+mr])
-    ax.set_ylim([0.0004661867107281955-mr, (0.0004661867107281955*2)+mr])
+    ax.set_xlim(min(cs[0])-mr, max(cs[0])+mr)
+    ax.set_ylim(min(cs[1])-mr, max(cs[1])+mr)
+    
     #fig.colorbar(s, ax=ax, cax=ax, orientation='horizontal')
     if multiplot==True:
         cax, cbar_kwds = matplotlib.colorbar.make_axes(ax, location = 'bottom')#,
@@ -382,7 +382,9 @@ def CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot):
         matplotlib.colorbar.ColorbarBase(cax, cmap=cmap,
                                     norm=normcmap,
                                     orientation=ori)
-    
+    #ax.scatter(, ycentres[index],8, marker='x', c='b')
+    #ax.set_xlim([0.0005894016287029388-mr, (0.0005894016287029388*2)+mr])
+    #ax.set_ylim([0.0004661867107281955-mr, (0.0004661867107281955*2)+mr])
     return cmap, normcmap, collection
 
 
@@ -681,7 +683,7 @@ def GetRoC(r_base,h):
 
 # Droplet evaporation functions *********************************
 
-def Masoud(x, y, a, dVdt_iso, CA):
+def Masoud(x, y, a, CA):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
@@ -719,13 +721,16 @@ def Masoud(x, y, a, dVdt_iso, CA):
                     X[idx,jdx] =  4*(a[idx]/r[idx,jdx])*A[idx] #+ (A-4*B)*((a[idx]**3*(r[idx,jdx]**2-3*z[idx]**2))/r[idx,jdx]**5) # equation (3.1) from Masoud et al. 2021
 
                     
-    dVdt=scipy.linalg.lu_solve(scipy.linalg.lu_factor(X),dVdt_iso)*1000
-    #dVdt=scipy.linalg.solve(X, dVdt_iso)*1000 
+    #dVdt=scipy.linalg.lu_solve(scipy.linalg.lu_factor(X),dVdt_iso, check_finite=False)*1000
+    #scipy.linalg.lu_factor(X)
+    #dVdt=scipy.linalg.lu_solve(,dVdt_iso, check_finite=False)*1000
+    Xinv = np.linalg.inv(X)        # inverse of the matrix...next step, calculate the flux
+    # Legacy methods___
+        # dVdt=scipy.linalg.solve(X, dVdt_iso)*1000 
+        # Y = linalg.inv(X)        # inverse of the matrix...next step, calculate the flux
+        # dVdt = dot(Y,dVdt_iso)*1000 # L/s: dot prod sums up all contributions - lab book 03/09/21
     
-    #Y = linalg.inv(X)        # inverse of the matrix...next step, calculate the flux
-    #dVdt = dot(Y,dVdt_iso)*1000 # L/s: dot prod sums up all contributions - lab book 03/09/21
-    
-    return dVdt
+    return Xinv
 
 def WrayFabricant(x,y,a,dVdt_iso):
     """Calculating Wray et al. 2020 theoretical
@@ -810,13 +815,13 @@ def ideal_gas_law(P,T,Mm):
     T (oC) Temperature
     Mm (kg.mol-1) molar mass
     P (Pa) vapour pressure"""
-    nbyV=P/(8.134*(T+273.15))
+    nbyV=P/(8.314*(T+273.15))
     concentration = nbyV*Mm
     return concentration
 
 def kohler(n,Mw,sigma,T,rho,radius):
     D = radius*2 # diameter (m)
-    kelvin = (4*Mw*sigma)/(8.314*T*rho*D)
+    kelvin = (4*Mw*sigma)/(8.314*(T+273.15)*rho*D)
     Raoult = (6*n*Mw)/(np.pi*rho*D**3)
     p_eqk = np.exp(kelvin)
     p_eqR = np.exp(-Raoult)
