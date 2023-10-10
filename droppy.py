@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 import matplotlib
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Wedge
+from matplotlib.patches import Wedge, Circle
 from matplotlib.axes._axes import _log as matplotlib_axes_logger
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
@@ -606,52 +606,42 @@ def saturation_vapour_density(T_k):
     return 0.0022*np.exp(77.345+0.0057*T_k-(7235/T_k))/T_k**9.2 # i think kgm-3
 
 
-
 def diffusion_coeff(ToC):
     """from S3.3 doi.org/10.1016/B978-0-12-386910-4.00003-2."""
     return (1+0.007*ToC)*21.2e-6 
-# def Tonini(CX,CY,Rb,CA):
 
-#     psi0 = np.pi-CA
-#     h = GetHeightCA(Rb, CA)
-    
-#     def Legendre(x,n):
-#         P_n = legendre(n)
-#         P_n_x = P_n(x)
-#         return P_n_x
-#     #https://mathworld.wolfram.com/ConicalFunction.html 
-#     def integrand(tau, xi, psi0, psi): 
-#         Mehler_func = Legendre(np.cosh(xi) ,complex(-1/2,tau))
-#         vals = Mehler_func*((np.cosh((np.pi-psi0)*tau)*np.cosh(psi*tau))/(np.cosh(np.pi*tau)*np.cosh(psi0*tau)))
-#         return vals
-    
-#     def calculate_integral(xi, psi0, psi):
-#         return quad(integrand, 0, np.inf, args=(xi, psi0, psi))[0]
-    
-    
+def CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot):
+    cmap = plt.get_cmap(cmaptype)
+    normcmap = colors.Normalize(vmin=vmin, vmax=vmax)
+    #normcmap = matplotlib.colors.Normalize(vmin=np.min([C.min(),C.min()]), vmax=np.max([C.max(),C.max()]))
+    ax.set_aspect(1)
 
-#     alpha=0# i think?
-#     gamma=0# could be??
-#     N = np.size(CX)
-#     X=np.empty([N,N])
-#     print(CX)
-#     for idx, i in enumerate(CX):
-#         for jdx, j in enumerate(CX):
-            
-#             psi0 = np.pi-CA[idx]
-#             if idx == jdx :     # the diagonal terms should be one
-#                 X[idx,jdx] = 1
-#             else:
-               
-#                 x = CX[idx]-CX[jdx]
-#                 y = CY[idx]-CY[jdx]
-#                 z = h[idx]
-#     # from http://www.fractalforums.com/theory/toroidal-coordinates/                
-#                 xi = np.sqrt((np.sqrt(x**2+y**2)-alpha)**2+z**2)
-#                 psi = np.arctan((z)/(np.sqrt(x**2+y**2)-alpha))-gamma
-#                 #phi = np.arctan(y/x)
-#                 Theta = np.cosh(xi)-np.cos(psi)
-#                 Sigma = np.sqrt(2)*Theta**(1/2)
-#                 calc_integrals= np.vectorize(calculate_integral)
-#                 X[idx,jdx]=Sigma*calc_integrals(xi, psi0, psi)
-#     return X
+    lst=[]
+    clr=[]
+    for idx, centre in enumerate(centres): 
+        eclr=cmap(normcmap(C[idx]))
+        circle = Circle((centre[0],centre[1]), r0[idx])
+        lst.append(circle)
+        clr.append(eclr) 
+    collection = PatchCollection(lst)
+    collection.set_facecolor(clr)
+    s = ax.add_collection(collection)
+    cs=list(zip(*centres))
+    mr=max(r0)
+    ax.set_xlim(min(cs[0])-mr, max(cs[0])+mr)
+    ax.set_ylim(min(cs[1])-mr, max(cs[1])+mr)  
+    #fig.colorbar(s, ax=ax, cax=ax, orientation='horizontal')
+    if multiplot==True:
+        cax, cbar_kwds = matplotlib.colorbar.make_axes(ax, location = 'bottom', pad=0.07)#,
+        ori='horizontal'
+        matplotlib.colorbar.ColorbarBase(cax, cmap=cmap,
+                                    norm=normcmap,
+                                    orientation=ori)
+    elif multiplot==False:
+        cax = fig.add_axes([0.9, 0.1, 0.03, 0.8])
+        ori='vertical'
+        matplotlib.colorbar.ColorbarBase(cax, cmap=cmap,
+                                    norm=normcmap,
+                                    orientation=ori)
+    
+    return cmap, normcmap, collection

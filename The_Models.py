@@ -8,8 +8,7 @@ import timeit
 import time
 import sys
 matplotlib_axes_logger.setLevel('ERROR')
-sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/')
-import Visualisation as vis
+
 
 # =============================================================================
 # import matplotlib
@@ -95,8 +94,8 @@ def MasoudEvaporate(RunTimeInputs):
     dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, RunTimeInputs['CA'], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
     vmax1 = [0,90]
     vmax2 = [max(dVdt_iso*1000)/4,0]
-    cmap1, normcmap1, collection1=vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
-    cmap2, normcmap2, collection2=vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
+    cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
+    cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
     
     residual=0
     ZERO=min(Vi)/10000 # IS THIS CORRECT???
@@ -177,8 +176,8 @@ def MasoudEvaporate(RunTimeInputs):
             else:
                 ax1.clear()
                 ax2.clear()
-                vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
-                vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
+                dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
+                dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
                 plt.pause(0.001)
             #writer.grab_frame()
             
@@ -223,8 +222,8 @@ def MasoudEvaporate(RunTimeInputs):
         # update final plot
         ax1.clear()
         ax2.clear()
-        vis.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
-        vis.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
+        dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
+        dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
         plt.pause(0.001)
 
     dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
