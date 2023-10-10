@@ -13,7 +13,7 @@ directory = r'PATH to search for and save all files'
 
 #CX,CY,CA,Rb = dpy.depositSquare(2,3,np.pi/2,1e-3)
 #data = dpy.load_MDL_pickle(directory)
-#data, xy, r, d = MDL.read_imageJ_coords(directory, "Centres")
+#data, xy, r, d = dpy.read_imageJ_coords(directory, "Centres")
 
 saving = True # Boolean for saving graphs and pickles with the results
 cmap_name = "nipy_spectral" # Name of the colour map used for plotting
