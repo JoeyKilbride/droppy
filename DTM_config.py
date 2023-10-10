@@ -24,6 +24,7 @@ Ambient_RH = 0.25 # Fraction [0-1]
 Ambient_T = 22   # Degrees C
 t=0                   # initial time (s) - should alway be zero (probably should be removed)
 model="Masoud"           # which model to simulate with "Wray" or "Masoud (Wray may need updating)"
+nterms = 1  # number of terms in the Masoud expansion
 TL=0   # delay before updating the evaporation rates after a droplet has evaporated (s) - zero is normal for the model 
 mode = "CCA" # constant contact area ("CCA"), constant contact radius ("CCR")
 box_volume =  np.inf # volume of the box droplets are evaporating in. Infinite is normal.

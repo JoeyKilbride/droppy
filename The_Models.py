@@ -148,7 +148,7 @@ def MasoudEvaporate(RunTimeInputs):
                                           RunTimeInputs['molar_mass'],
                                           RunTimeInputs['Ambient_T'],
                                           RH, r0, theta, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
-            dVdt_new    = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
+            dVdt_new    = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive],RunTimeInputs['nterms'])
 
             #toc = time.perf_counter()
             #Calc_Time[step_counter]=toc-tic
@@ -159,7 +159,7 @@ def MasoudEvaporate(RunTimeInputs):
             if np.sum(transient_droplets)>0: # if any transient droplets
                 dVdt_transient[alive_prev]    = dpy.Masoud(xcentres[alive_prev], 
                                                ycentres[alive_prev], r0[alive_prev], 
-                                               dVdt_iso[alive_prev], theta[alive_prev])
+                                               dVdt_iso[alive_prev], theta[alive_prev],RunTimeInputs['nterms'])
                 dVdt[transient_droplets] = deepcopy(dVdt_transient[transient_droplets])
             t_i     = np.vstack([t_i, t]) # record time steps
             V_t     = np.vstack([V_t, Vi]) # add new volumes to array

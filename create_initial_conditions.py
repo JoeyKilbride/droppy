@@ -31,6 +31,7 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['Transient_Length']=c.TL   # delay before updating evap rate (s)
     RunTimeInputs['bias_point']= c.bp        # xy coords of last point in array to evaporate 1D np array
     RunTimeInputs['bias_grad'] = c.bg
+    RunTimeInputs['nterms'] = c.nterms
     RunTimeInputs['mode']=c.mode
     if set(['sort']).issubset(dir(c)):
         RunTimeInputs['sort']=c.sort

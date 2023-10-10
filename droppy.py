@@ -488,7 +488,7 @@ def GetRoC(r_base,h):
 
 # Droplet evaporation functions *********************************
 
-def Masoud(x, y, a, dVdt_iso, CA):
+def Masoud(x, y, a, dVdt_iso, CA, terms):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
@@ -497,13 +497,13 @@ def Masoud(x, y, a, dVdt_iso, CA):
         return (1+ (np.cosh((2*np.pi-CA)*x)/np.cosh(CA*x) ) )**-1
     
     def intA2(CA):
-        return quad(intA, 0, 100, args=(CA))[0]
+        return scipy.integrate.quad(intA, 0, 100, args=(CA))[0]
 
     def intB(x, CA):
-        return (1+ (np.cosh((2*np.pi-CA)*x)/np.cosh(CA*x) ) )**-1 *x**2
+        return ((1+ (np.cosh((2*np.pi-CA)*x)/np.cosh(CA*x) ) )**-1) *x**2
     
     def intB2(CA):
-        return quad(intB, 0, 100, args=(CA))[0]
+        return scipy.integrate.quad(intB, 0, 100, args=(CA))[0]
 
     VintA= np.vectorize(intA2)
     A=VintA(CA)
@@ -523,14 +523,16 @@ def Masoud(x, y, a, dVdt_iso, CA):
                     X[idx,jdx] = 1
                 else:
                     #print("test including the second term here")
-                    X[idx,jdx] =  4*(a[idx]/r[idx,jdx])*A[idx] #+ (A-4*B)*((a[idx]**3*(r[idx,jdx]**2-3*z[idx]**2))/r[idx,jdx]**5) # equation (3.1) from Masoud et al. 2021
-
-                    
+                    if terms==1:
+                        X[idx,jdx] =  4*(a[idx]/r[idx,jdx])*A[idx] #+ (A-4*B)*((a[idx]**3*(r[idx,jdx]**2-3*z[idx]**2))/r[idx,jdx]**5) # equation (3.1) from Masoud et al. 2021
+                    elif terms==2:
+                        z = a[idx] # 
+                        X[idx,jdx] =  4*(a[idx]/r[idx,jdx])*A[idx] + (A[idx]-4*B[idx])*((a[idx]**3*(r[idx,jdx]**2-3*z**2))/(r[idx,jdx]**5)) # equation (3.1) from Masoud et al. 2021
+                       
+                    else: 
+                        print("Warning: Invalid number of terms (1 or 2).")
+                        return None
     dVdt=scipy.linalg.lu_solve(scipy.linalg.lu_factor(X),dVdt_iso)*1000
-    #dVdt=scipy.linalg.solve(X, dVdt_iso)*1000 
-    
-    #Y = linalg.inv(X)        # inverse of the matrix...next step, calculate the flux
-    #dVdt = dot(Y,dVdt_iso)*1000 # L/s: dot prod sums up all contributions - lab book 03/09/21
     
     return dVdt
 
