@@ -91,7 +91,15 @@ def MasoudEvaporate(RunTimeInputs):
     
     #CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot)
     centres=list(zip(list(xcentres),list(ycentres)))
-    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, RunTimeInputs['CA'], RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+    dVdt_iso    = dpy.getIsolated(RunTimeInputs['Antoine_coeffs'][0],
+                                        RunTimeInputs['Antoine_coeffs'][1],
+                                        RunTimeInputs['Antoine_coeffs'][2],
+                                        RunTimeInputs['molar_mass'],
+                                        RunTimeInputs['Ambient_T'], 
+                                        RunTimeInputs['Ambient_RH'], 
+                                        r0, 
+                                        RunTimeInputs['CA'], 
+                                        RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19    
     vmax1 = [0,90]
     vmax2 = [max(dVdt_iso*1000)/4,0]
     cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
@@ -134,7 +142,12 @@ def MasoudEvaporate(RunTimeInputs):
             Vprev       = deepcopy(Vi)
             #tic = time.perf_counter()
 
-            dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RH, r0, theta, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+            dVdt_iso    = dpy.getIsolated(RunTimeInputs['Antoine_coeffs'][0],
+                                          RunTimeInputs['Antoine_coeffs'][1],
+                                          RunTimeInputs['Antoine_coeffs'][2],
+                                          RunTimeInputs['molar_mass'],
+                                          RunTimeInputs['Ambient_T'],
+                                          RH, r0, theta, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
             dVdt_new    = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
 
             #toc = time.perf_counter()
@@ -160,12 +173,14 @@ def MasoudEvaporate(RunTimeInputs):
             if RunTimeInputs['box_volume']!=np.inf:
                 print("RH = ","{:.2f}".format(RH*100),"%")
                 RH_t    = np.vstack([RH_t, RH]) 
-                RH          = dpy.dynamic_humidity(RunTimeInputs['box_volume'],RunTimeInputs['molar_mass'],
-                                        RunTimeInputs['Antoine_coeffs'][0],
-                                        RunTimeInputs['Antoine_coeffs'][1],
-                                        RunTimeInputs['Antoine_coeffs'][2],
-                                        RunTimeInputs['Ambient_T'] +273.15, 
-                                        RunTimeInputs['rho_liquid'], np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
+                RH          = dpy.dynamic_humidity(RunTimeInputs['box_volume'],
+                                                RunTimeInputs['molar_mass'],
+                                                RunTimeInputs['Antoine_coeffs'][0],
+                                                RunTimeInputs['Antoine_coeffs'][1],
+                                                RunTimeInputs['Antoine_coeffs'][2],
+                                                RunTimeInputs['Ambient_T'] +273.15, 
+                                                RunTimeInputs['rho_liquid'], 
+                                                np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
 
             else:
                 RH = RunTimeInputs['Ambient_RH']

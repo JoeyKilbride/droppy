@@ -566,19 +566,17 @@ def WrayFabricant(x,y,a,dVdt_iso):
     return dVdt # return theoretical flux values
 
 
-def getIsolated(Temperature, H, Rb, CA, rho_liquid):
+def getIsolated(A,B,C, mm,T, H, Rb, CA, rho_liquid):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
-    ###DCv = (3e-48)*(Temperature)**(19.5) # Constants from Temperature.
-    #D=0.225e-4*(Temperature/273.15)**1.8 # Old D calculation not as accurate changed 14/01/2022
-    D=diffusion_coeff(Temperature)
-    #print("D = ",D)
-    T_kelvin = Temperature +273.15
-    Cv=saturation_vapour_density(T_kelvin)
-    #print("\nCv = ",Cv)
-    #DCv = D*Cv#(2.037e-12/(Temperature**8.2))*exp(77.345+0.0057*Temperature-(7235/Temperature)) 
-    dmdt_env = D*Cv*(1-H) # Calculate enviomental component of flux.
+    
+    D=diffusion_coeff(T)
+    T_kelvin = T +273.15
+    #Cv=saturation_vapour_density(T_kelvin)
+    psat = Psat(A,B,C,T)
+    csat = ideal_gas_law(psat, T, mm)
+    dmdt_env = D*csat*(1-H) # Calculate enviomental component of flux.
     dmdt_geom = np.pi*Rb*(0.27*(CA**2)+1.30)
     dmdt=dmdt_env*dmdt_geom 
     dVdt_isolated=-(dmdt/rho_liquid) # m3/s - Convention is to have -dVdt as evaporation
@@ -591,6 +589,15 @@ def Psat(A,B,C,T):
         T: Temperature (oC)"""
     psat = 10**(A-(B/(C+T)))
     return psat
+
+def ideal_gas_law(P,T,Mm):
+    """Calculates the vapour density (kg.m-3) using the ideal gas law.
+    T (oC) Temperature
+    Mm (kg.mol-1) molar mass
+    P (Pa) vapour pressure"""
+    nbyV=P/(8.314*(T+273.15))
+    concentration = nbyV*Mm
+    return concentration
 
 def dynamic_humidity(box_volume,molar_mass,A,B,C,T,rho, V_evap):
     psat = Psat(A,B,C,T-273.15)*(101325/760)
