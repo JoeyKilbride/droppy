@@ -602,7 +602,6 @@ def ideal_gas_law(P,T,Mm):
 def dynamic_humidity(box_volume,molar_mass,A,B,C,T,rho, V_evap):
     psat = Psat(A,B,C,T-273.15)*(101325/760)
     R = 8.314
-    molar_mass = 0.01801528 # kg/mol
     n = (psat*box_volume)/(R*T)
     msat = n*molar_mass
     RH_rise = (rho*V_evap/1000)/msat
