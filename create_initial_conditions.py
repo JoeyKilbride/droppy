@@ -33,6 +33,8 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['bias_point']= c.bp        # xy coords of last point in array to evaporate 1D np array
     RunTimeInputs['bias_grad'] = c.bg
     RunTimeInputs['mode']=c.mode
+    if set(['sort']).issubset(dir(c)):
+        RunTimeInputs['sort']=c.sort
     RunTimeInputs['Antoine_coeffs'] = [c.A,c.B,c.C]
     RunTimeInputs['box_volume'] = c.box_volume
     RunTimeInputs['rho_liquid'] = c.rho_liquid
@@ -84,6 +86,12 @@ for i in range(1):
         dpy.ReportResults(Results, cmap_name)
     if compare:
         eResults = dpy.load_MDL_pickle(RunTimeInputs['Directory'])
+        if 'sort' in list(RunTimeInputs.keys()):
+            eResults['X'] = eResults['X'][RunTimeInputs['sort']]
+            eResults['Y'] = eResults['Y'][RunTimeInputs['sort']]
+            eResults['drying_times'] = eResults['drying_times'][RunTimeInputs['sort']]
+            eResults['rdx'] = eResults['rdx'][RunTimeInputs['sort']]
+
         vis.Compare2Data(Results, eResults, cmap_name)
         print("bias angle  = ",Results['bias_angle'])
         print("bias gradient  = ",Results['bias_grad'])
