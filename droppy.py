@@ -176,7 +176,7 @@ def load_MDL_pickle(directory, prefix=None):
     else:
         prefix = prefix + ".pickle"
     try:
-        target = glob.glob(os.path.join(directory,prefix))[0]
+        target = glob.glob(os.path.join(directory,prefix))[0] # with .pickle
         if os.path.getsize(target)>0:
             with open(target, 'rb') as handle:
                 input_dict = pickle.load(handle)
@@ -186,7 +186,7 @@ def load_MDL_pickle(directory, prefix=None):
             prefix = "MDL_*.pkl"
         else:
             prefix = prefix[:4]+ ".pkl"
-        target = glob.glob(os.path.join(directory,prefix))[0]        
+        target = glob.glob(os.path.join(directory,prefix))[0] # with .pkl
         if os.path.getsize(target)>0:
             with open(target, 'rb') as handle:
                 input_dict = pickle.load(handle)
@@ -228,7 +228,7 @@ def add_bias(xb,yb,x,y, bias_gradient):
 
     rd = get_radial_position(x, y, 0, 0) # distance to droplet
     bd = rd*np.cos(theta_1) # distance along bias direction
-    radial_bias = np.sqrt(xb**2+yb**2)
+    radial_bias = np.sqrt(xb**2+yb**2)  
     mb = (-bias_gradient/radial_bias)
     bias = (bd*mb)+1
     return b_ang, mb, bias[0]
@@ -579,7 +579,8 @@ def getIsolated(A,B,C, mm,T, H, Rb, CA, rho_liquid):
     psat = Psat(A,B,C,T)
     csat = ideal_gas_law(psat, T, mm)
     dmdt_env = D*csat*(1-H) # Calculate enviomental component of flux.
-    dmdt_geom = np.pi*Rb*(0.27*(CA**2)+1.30)
+    f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
+    dmdt_geom = np.pi*Rb*f_theta 
     dmdt=dmdt_env*dmdt_geom 
     dVdt_isolated=-(dmdt/rho_liquid) # m3/s - Convention is to have -dVdt as evaporation
     
@@ -589,7 +590,7 @@ def Psat(A,B,C,T):
     """Saturation vapour pressure using the Antoine equation.
         A,B,C: Antoine constants for fluid.
         T: Temperature (oC)"""
-    psat = 10**(A-(B/(C+T)))
+    psat = 10**(A-(B/(C+T)))*(101325/760)
     return psat
 
 def ideal_gas_law(P,T,Mm):
@@ -602,7 +603,7 @@ def ideal_gas_law(P,T,Mm):
     return concentration
 
 def dynamic_humidity(box_volume,molar_mass,A,B,C,T,rho, V_evap):
-    psat = Psat(A,B,C,T-273.15)*(101325/760)
+    psat = Psat(A,B,C,T-273.15)
     R = 8.314
     n = (psat*box_volume)/(R*T)
     msat = n*molar_mass
@@ -693,8 +694,8 @@ def Compare2Data(tResults, eResults, cmap_name):
     cmap1, normcmap1, collection1=CreateDroplets(ax_2hm[1], f_2hm, cmap_name, centres, 
                                                     tResults['RunTimeInputs']['Rb']*1000, c, 0, 1, True)
 
-    diff = normalise(tResults['t_evap'])-dpy.normalise(eResults['drying_times'])
-    lim = np.max([abs(np.min(diff)), abs(np.max(diff))])
+    diff = normalise(tResults['t_evap'])-normalise(eResults['drying_times'])
+    lim = 0.1#np.max([abs(np.min(diff)), abs(np.max(diff))])
     cmap1, normcmap1, collection1=CreateDroplets(ax_2hm[2], f_2hm, 'RdBu_r', centres, 
                                                     tResults['RunTimeInputs']['Rb']*1000, diff, -lim, lim, True)
     
