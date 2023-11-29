@@ -99,14 +99,14 @@ def MasoudEvaporate(RunTimeInputs):
                                         RunTimeInputs['Ambient_RH'], 
                                         r0, 
                                         RunTimeInputs['CA'], 
-                                        RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19    
+                                        RunTimeInputs['rho_liquid'], RunTimeInputs['D']) # Using Hu & Larson 2002 eqn. 19    
     vmax1 = [0,90]
     vmax2 = [max(dVdt_iso*1000)/4,0]
     cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
     cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
     
     residual=0
-    ZERO=min(Vi)/10000 # IS THIS CORRECT???
+    ZERO=0.0 #min(Vi)/10000 # IS THIS CORRECT???
     print("\tNumber of droplets = ", RunTimeInputs['DNum'])
     #print("\tr0 = ", r0)
     #print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
@@ -147,7 +147,8 @@ def MasoudEvaporate(RunTimeInputs):
                                           RunTimeInputs['Antoine_coeffs'][2],
                                           RunTimeInputs['molar_mass'],
                                           RunTimeInputs['Ambient_T'],
-                                          RH, r0, theta, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
+                                          RH, r0, theta, RunTimeInputs['rho_liquid'], 
+                                          RunTimeInputs['D']) # Using Hu & Larson 2002 eqn. 19
             dVdt_new    = dpy.Masoud(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive],RunTimeInputs['nterms'])
 
             #toc = time.perf_counter()
@@ -203,9 +204,9 @@ def MasoudEvaporate(RunTimeInputs):
             transient_droplets = transient_times<0 # update transient droplets
             print("| "+str(t)+" ",end="", flush=True)
         
-        gone        = Vi<ZERO
+        gone        = Vi<=ZERO
         alive_prev=deepcopy(alive)
-        alive       = Vi>=ZERO
+        alive       = Vi>ZERO
         N_alive = len(Vi[alive])
         gone_record = np.vstack([gone_record, gone])
         
