@@ -29,6 +29,7 @@ TL=0   # delay before updating the evaporation rates after a droplet has evapora
 mode = "CCA" # constant contact area ("CCA"), constant contact radius ("CCR")
 box_volume =  np.inf # volume of the box droplets are evaporating in. Infinite is normal.
 rho_liquid = 997 # liquid density (kg/m^3)
+D = "water" # "water": uses temperature dependent expression for water, otherwise uses specified value in m^2/s)
 A,B,C = 8.07131, 1730.63, 233.426 # Antoine Coefficients for liquid (this is water here)
 molar_mass = 0.01801528 # molar mass of the liquid (kg/mol) (this is water)
 bg=None # gradient of linear bias 

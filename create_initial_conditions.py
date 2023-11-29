@@ -33,6 +33,10 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['bias_grad'] = c.bg
     RunTimeInputs['nterms'] = c.nterms
     RunTimeInputs['mode']=c.mode
+    if c.D=="water":
+        RunTimeInputs['D']=dpy.diffusion_coeff(c.Ambient_T)
+    else:
+        RunTimeInputs['D']=c.D
     if set(['sort']).issubset(dir(c)):
         RunTimeInputs['sort']=c.sort
     RunTimeInputs['Antoine_coeffs'] = [c.A,c.B,c.C]
