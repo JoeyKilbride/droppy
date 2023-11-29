@@ -163,7 +163,6 @@ def ReadSVGFile(directory, filename):
 
 def read_config(config_dir, file):
     sys.path.insert(0, config_dir)
-    #import MDL_config as config
     config=importlib.import_module(file, package=None) 
     return config
 
@@ -269,7 +268,7 @@ def ReportResults(Results, cmap_name):
     t_evap = np.empty([ND])
     for pdx in range(ND):
         name = "D"+str(pdx)
-        ax_V.plot(Results['Time'], Results['Volume'][:,pdx]*1e6, label=name, marker="o")
+        ax_V.plot(Results['Time']/np.max(Results['Time']), Results['Volume'][:,pdx]*1e6, label=name, marker="o")
         elem=list(np.nonzero(Results['Volume'][:,pdx]))[0][-1] # finds element where V is first zero.
         t_evap[pdx]=Results['Time'][elem]
         #print("evap time ", t_evap[pdx])
@@ -279,11 +278,11 @@ def ReportResults(Results, cmap_name):
         #print("Inital CX: ", Results["RunTimeInputs"]["xcentres"][pdx])
         #print(Results['Volume'][:,pdx]*1e6)
         if Results['RunTimeInputs']['mode']=="CCR":
-            ax_idx.plot(Results['Time'], Results['Theta'][:,pdx], label=name, marker="o")
+            ax_idx.plot(Results['Time']/np.max(Results['Time']), Results['Theta'][:,pdx], label=name, marker="o")
         else:
-            ax_idx.plot(Results['Time'], Results['Radius'][:,pdx], label=name, marker="o")
+            ax_idx.plot(Results['Time']/np.max(Results['Time']), Results['Radius'][:,pdx], label=name, marker="o")
             
-        ax_dVdt.plot(Results['Time'], Results['dVdt'][:,pdx]*1e6, label=name)
+        ax_dVdt.plot(Results['Time']/np.max(Results['Time']), Results['dVdt'][:,pdx]*1e6, label=name)
     #print("t_evap = ", t_evap)
     #print("Mean calculation time: ",mean(Results['Calc_Time']))
     #print("Total calculation time: ",sum(Results['Calc_Time']))
@@ -292,24 +291,28 @@ def ReportResults(Results, cmap_name):
     ax_dt.set_aspect('equal', adjustable='box')
     fig_dt.colorbar(s_dt, ax=ax_dt,  orientation='horizontal')
     #print("Number of droplets: ",Results['RunTimeInputs']['DNum'])
-    ax_V.set_ylabel("V (\u03BC"+ "L)")
-    ax_V.set_xlabel("Time (s)")
+    ax_V.set_ylabel(r"$V (\mu L)$")
+    ax_V.set_xlabel(r"$t/\tau_{max}$")
     if Results['RunTimeInputs']['DNum']<15:
         ax_V.legend()
         ax_idx.legend()
         ax_dVdt.legend()
         
-    ax_idx.set_xlabel("Time (s)")
+    ax_idx.set_xlabel(r"$t/\tau_{max}$")
     if Results['RunTimeInputs']['mode']=="CCR":
         ax_idx.set_ylabel("\u03B8 (\u00b0)")
     else:
-        ax_idx.set_ylabel(r"$R_{b}$ (mm)")
-    ax_dVdt.set_xlabel("Time (s)")
-    ax_dVdt.set_ylabel("dV/dt (\u03BC"+ "L/s)")
+        ax_idx.set_ylabel(r"$a$ (mm)")
+    ax_dVdt.set_xlabel(r"$t/\tau_{max}$")
+    ax_dVdt.set_ylabel(r"$\frac{dV}{dt} (\mu$"+ r"$Ls^{-1})$")
     fig_V.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_V.png"))
     fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.png"))
     fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.png"))
     fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.png"))
+    fig_V.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_V.svg"))
+    fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.svg"))
+    fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.svg"))
+    fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.svg"))
     #fig_tevap.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_tevap.png"))
     Resultsfile = open(os.path.join(Results['RunTimeInputs']['Directory'],"MDTM_"+Results['RunTimeInputs']['Filename']+'.pkl'), 'wb')
     Results['t_evap'] = t_evap
@@ -568,12 +571,11 @@ def WrayFabricant(x,y,a,dVdt_iso):
     return dVdt # return theoretical flux values
 
 
-def getIsolated(A,B,C, mm,T, H, Rb, CA, rho_liquid):
+def getIsolated(A,B,C, mm,T, H, Rb, CA, rho_liquid, D):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
     
-    D=diffusion_coeff(T)
     T_kelvin = T +273.15
     #Cv=saturation_vapour_density(T_kelvin)
     psat = Psat(A,B,C,T)
@@ -695,7 +697,7 @@ def Compare2Data(tResults, eResults, cmap_name):
                                                     tResults['RunTimeInputs']['Rb']*1000, c, 0, 1, True)
 
     diff = normalise(tResults['t_evap'])-normalise(eResults['drying_times'])
-    lim = 0.1#np.max([abs(np.min(diff)), abs(np.max(diff))])
+    lim = np.max([abs(np.min(diff)), abs(np.max(diff))])
     cmap1, normcmap1, collection1=CreateDroplets(ax_2hm[2], f_2hm, 'RdBu_r', centres, 
                                                     tResults['RunTimeInputs']['Rb']*1000, diff, -lim, lim, True)
     
@@ -730,9 +732,9 @@ def Compare2Data(tResults, eResults, cmap_name):
     f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "scatter.png"))
     f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "te_tau.png"))
     f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "taur.png"))
-    f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "scatter.eps"))
-    f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "te_tau.eps"))
-    f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "taur.eps"))
+    f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "scatter.svg"))
+    f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "te_tau.svg"))
+    f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "taur.svg"))
     
     plt.show()
     return
