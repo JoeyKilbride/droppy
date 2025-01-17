@@ -305,6 +305,7 @@ def ReportResults(Results, cmap_name):
         ax_idx.set_ylabel(r"$a$ (mm)")
     ax_dVdt.set_xlabel(r"$t/\tau_{max}$")
     ax_dVdt.set_ylabel(r"$\frac{dV}{dt} (\mu$"+ r"$Ls^{-1})$")
+
     fig_V.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_V.png"))
     fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.png"))
     fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.png"))
@@ -376,6 +377,23 @@ def depositHexagon(Nr, s, Rb):
 
     return x, y, Rb*np.ones(len(x))
             
+def depositTriangle(N,s,a):
+    xs = s*a
+    ys = s*a*np.sqrt(3)/2
+    total = int(N*(N+1)/2)
+    X=np.empty(total)
+    Y=np.empty(total)
+    counter =0
+    Ny=N
+    for j in range(N):
+        for i in range(Ny):
+            print(counter)
+            print("i= ",i, " j=",j)
+            X[counter]=(i*xs)+j*(xs/2)
+            Y[counter]=j*ys
+            counter =counter+1
+        Ny=Ny-1
+    return X, Y
 
 def depositTriangle_NOTWORKING(N,s,ca,Rb):
     side=(N-1)*s
@@ -605,7 +623,7 @@ def ideal_gas_law(P,T,Mm):
     return concentration
 
 def dynamic_humidity(box_volume,molar_mass,A,B,C,T,rho, V_evap):
-    psat = Psat(A,B,C,T-273.15)
+    psat = Psat(A,B,C, T-273.15)
     R = 8.314
     n = (psat*box_volume)/(R*T)
     msat = n*molar_mass
@@ -717,8 +735,8 @@ def Compare2Data(tResults, eResults, cmap_name):
     ax_lin.set_ylabel(r"$\tau_{th}$")
     ax_lin.set_xlabel(r"$\tau_{exp}$")
 
-    ax_dt.set_ylabel(r"$\tau$")
-    ax_dt.set_xlabel(r"$\hat{R}$")
+    ax_dt.set_ylabel(r"$\hat{\tau}$")
+    ax_dt.set_xlabel(r"$r_c$")
     ax_dt.legend()
 
     ax_2hm[0].set_title("Experiment")
@@ -729,12 +747,12 @@ def Compare2Data(tResults, eResults, cmap_name):
     ax_2hm[2].set_aspect('equal')
     
     # Saving
-    f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "scatter.png"))
-    f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "te_tau.png"))
-    f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "taur.png"))
-    f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "scatter.svg"))
-    f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "te_tau.svg"))
-    f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], "taur.svg"))
+    f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"scatter.png"))
+    f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"te_tau.png"))
+    f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"taur.png"))
+    f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"scatter.svg"))
+    f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"te_tau.svg"))
+    f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"taur.svg"))
     
     plt.show()
     return
