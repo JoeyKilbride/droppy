@@ -87,7 +87,7 @@ def MasoudEvaporate(RunTimeInputs):
     # ax2.set_xlim(xmin, xmax)
     # ax2.set_ylim(ymin, ymax)
     cmtype1='gnuplot2_r'
-    cmtype2='hot'
+    cmtype2='jet'
     
     #CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot)
     centres=list(zip(list(xcentres),list(ycentres)))
@@ -101,7 +101,7 @@ def MasoudEvaporate(RunTimeInputs):
                                         RunTimeInputs['CA'], 
                                         RunTimeInputs['rho_liquid'], RunTimeInputs['D']) # Using Hu & Larson 2002 eqn. 19    
     vmax1 = [0,90]
-    vmax2 = [max(dVdt_iso*1000)/4,0]
+    vmax2 = [max(dVdt_iso*1000),abs(max(dVdt_iso*1000))]
     cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
     cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
     
