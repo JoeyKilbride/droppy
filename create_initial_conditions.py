@@ -22,7 +22,7 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['xcentres']=c.CX           # as 1D np array ()
     RunTimeInputs['ycentres']=c.CY           # as 1D np array
     RunTimeInputs['DNum']=len(c.CX)          # total number of droplets in array
-    RunTimeInputs['Ambient_RH']=c.Ambient_RH # Fraction [0-1]
+    RunTimeInputs['Ambient_RHs']=c.Ambient_RHs # Fraction [0-1]
     RunTimeInputs['Ambient_T']=c.Ambient_T   # Degrees C
     RunTimeInputs['t']=c.t                   # initial time (s)
     RunTimeInputs['model']=c.model           # which model to simulate with "Wray" or "Masoud"
@@ -33,17 +33,19 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['bias_grad'] = c.bg
     RunTimeInputs['nterms'] = c.nterms
     RunTimeInputs['mode']=c.mode
+    RunTimeInputs['rand']=c.rand
     if c.D=="water":
         RunTimeInputs['D']=dpy.diffusion_coeff(c.Ambient_T)
     else:
         RunTimeInputs['D']=c.D
     if set(['sort']).issubset(dir(c)):
         RunTimeInputs['sort']=c.sort
-    RunTimeInputs['Antoine_coeffs'] = [c.A,c.B,c.C]
+    RunTimeInputs['Antoine_coeffs'] = c.ABCs
     RunTimeInputs['box_volume'] = c.box_volume
     RunTimeInputs['rho_liquid'] = c.rho_liquid
-    RunTimeInputs['molar_mass'] = c.molar_mass
+    RunTimeInputs['molar_masses'] = c.molar_masses
     RunTimeInputs['Vi'] = dpy.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
+    print("initial volumes= ", RunTimeInputs['Vi'])
     
     return RunTimeInputs, c.saving, c.compare, c.cmap_name
 
@@ -79,15 +81,17 @@ directory = input('Enter a file path: ')
 
 for i in range(1):
     RunTimeInputs, saving, compare, cmap_name = create_initial_conditions(i,directory)
-    if RunTimeInputs['model'] == "Wray":
-        Results = mod.WrayEvaporate(RunTimeInputs)
-    elif RunTimeInputs['model'] == "Masoud":
-        Results = mod.MasoudEvaporate(RunTimeInputs)
-    else:
-        print("\nInvalid model name.")
-        break
+    Results = mod.MasoudEvaporate(RunTimeInputs)
+    
+    # if RunTimeInputs['model'] == "Wray":
+    #     Results = mod.WrayEvaporate(RunTimeInputs)
+    # elif RunTimeInputs['model'] == "Masoud":
+    #     Results = mod.MasoudEvaporate(RunTimeInputs)
+    # else:
+        # print("\nInvalid model name.")
+        # break
     if saving:
-        dpy.ReportResults(Results, cmap_name)
+        dpy.ReportResults(Results, cmap_name, RunTimeInputs['model'])
     if compare:
         eResults = dpy.load_MDL_pickle(RunTimeInputs['Directory'])
         if 'sort' in list(RunTimeInputs.keys()):

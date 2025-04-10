@@ -17,6 +17,9 @@ import warnings
 import pickle
 matplotlib_axes_logger.setLevel('ERROR')
 from copy import deepcopy
+import timeit
+import time
+
 #from scipy.special import legendre
 #from matplotlib.animation import FFMpegWriter
 #import itertools
@@ -197,9 +200,9 @@ def load_MDTM_pickle(directory, prefix=None):
         prefix (Optional): specify a specific filename (no ext)."""
     #print("Trying with .pickle")
     if prefix==None:
-        prefix1 = "MDTM_*.pickle"
+        prefix1 = "MDTM_*.pkl"
     else:
-        prefix1 = prefix + ".pickle"
+        prefix1 = prefix + ".pkl"
     try:
         target = glob.glob(os.path.join(directory,prefix1))[0]
         if os.path.getsize(target)>0:
@@ -248,7 +251,7 @@ def get_cmap(n, name='prism'):
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
     
-def ReportResults(Results, cmap_name):
+def ReportResults(Results, cmap_name, which_model):
     """Plots graphics from the evaportion data."""
     plt.close('all')
     fig_V = plt.figure()
@@ -315,7 +318,7 @@ def ReportResults(Results, cmap_name):
     fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.svg"))
     fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.svg"))
     #fig_tevap.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_tevap.png"))
-    Resultsfile = open(os.path.join(Results['RunTimeInputs']['Directory'],"MDTM_"+Results['RunTimeInputs']['Filename']+'.pkl'), 'wb')
+    Resultsfile = open(os.path.join(Results['RunTimeInputs']['Directory'],which_model+"_"+Results['RunTimeInputs']['Filename']+'.pkl'), 'wb')
     Results['t_evap'] = t_evap
     pickle.dump(Results, Resultsfile)
     Resultsfile.close()
@@ -509,7 +512,58 @@ def GetRoC(r_base,h):
 
 # Droplet evaporation functions *********************************
 
-def Masoud(x, y, a, dVdt_iso, CA, terms):
+# def Masoud(x, y, a, dVdt_iso, CA, terms):
+#     """Calculating Masoud et al. 2020 theoretical evaporation
+#     rates for multiple droplets.
+#     Returns droplet evaporation rates in L/s. """
+
+#     def intA(x, CA):
+#         return (1+ (np.cosh((2*np.pi-CA)*x)/np.cosh(CA*x) ) )**-1
+    
+#     def intA2(CA):
+#         return scipy.integrate.quad(intA, 0, 100, args=(CA))[0]
+
+#     def intB(x, CA):
+#         return ((1+ (np.cosh((2*np.pi-CA)*x)/np.cosh(CA*x) ) )**-1) *x**2
+    
+#     def intB2(CA):
+#         return scipy.integrate.quad(intB, 0, 100, args=(CA))[0]
+
+#     VintA= np.vectorize(intA2)
+#     A=VintA(CA)
+#     VintB= np.vectorize(intB2)
+#     B=VintB(CA)
+  
+#     N = np.size(x)
+#     r=np.empty([N,N])           # set-up empty array for inter-droplet distance
+#     X=np.empty([N,N])
+
+#     for idx, i in enumerate(x):
+#                 for jdx, j in enumerate(x):
+#                     r[idx,jdx]=np.sqrt((i-j)**2+(y[idx]-y[jdx])**2)
+#                     #print("r=",r)
+#                     if idx == jdx :     # the diagonal terms should be one
+#                         X[idx,jdx] = 1
+#                     else:
+#                         #print("test including the second term here")
+#                         if terms==1:
+#                             X[idx,jdx] =  4*(a[idx]/r[idx,jdx])*A[idx] 
+#                         elif terms==2:
+#                             Ri = a[idx]/np.sin(CA[idx])
+#                             hi = Ri-(a[idx]/np.tan(CA[idx]))
+#                             Rj = a[jdx]/np.sin(CA[jdx])
+#                             hj = Rj-(a[jdx]/np.tan(CA[jdx]))
+#                             z = abs((Ri-(hi/3))-(Rj-(hj/3))) # difference between geometric centres in z
+#                             X[idx,jdx] =  4*(a[idx]/r[idx,jdx])*A[idx] + (A[idx]-4*B[idx])*((a[idx]**3*(r[idx,jdx]**2-3*z**2))/(r[idx,jdx]**5))
+#                         else: 
+#                             print("Warning: Invalid number of terms (1 or 2).")
+#                             return None
+
+#     lu, piv = scipy.linalg.lu_factor(X)
+#     dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)*1000
+#     return dVdt
+
+def Masoud_fast(x, y, a, dVdt_iso, CA):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
@@ -530,31 +584,39 @@ def Masoud(x, y, a, dVdt_iso, CA, terms):
     A=VintA(CA)
     VintB= np.vectorize(intB2)
     B=VintB(CA)
-  
-    N = np.size(x)
-    r=np.empty([N,N])           # set-up empty array for inter-droplet distance
-    X=np.empty([N,N])
-
-
-    for idx, i in enumerate(x):
-            for jdx, j in enumerate(x):
-                r[idx,jdx]=np.sqrt((i-j)**2+(y[idx]-y[jdx])**2)
-                #print("r=",r)
-                if idx == jdx :     # the diagonal terms should be one
-                    X[idx,jdx] = 1
-                else:
-                    #print("test including the second term here")
-                    if terms==1:
-                        X[idx,jdx] =  4*(a[idx]/r[idx,jdx])*A[idx] #+ (A-4*B)*((a[idx]**3*(r[idx,jdx]**2-3*z[idx]**2))/r[idx,jdx]**5) # equation (3.1) from Masoud et al. 2021
-                    elif terms==2:
-                        z = a[idx] # 
-                        X[idx,jdx] =  4*(a[idx]/r[idx,jdx])*A[idx] + (A[idx]-4*B[idx])*((a[idx]**3*(r[idx,jdx]**2-3*z**2))/(r[idx,jdx]**5)) # equation (3.1) from Masoud et al. 2021
-                       
-                    else: 
-                        print("Warning: Invalid number of terms (1 or 2).")
-                        return None
-    dVdt=scipy.linalg.lu_solve(scipy.linalg.lu_factor(X),dVdt_iso)*1000
     
+    tic = time.perf_counter()
+    Rij = a/np.sin(CA)
+    hij = Rij-(a/np.tan(CA))
+    zi = Rij - hij/3
+    z = np.abs(zi[:, None] - zi[None, :]) # difference between geometric centres in z
+    toc = time.perf_counter()
+    print("\tcalculate z: " ,toc-tic)
+
+    tic = time.perf_counter()
+    x_diff = x[:,None]-x[None,:]
+    y_diff = y[:,None]-y[None,:]
+    r = np.sqrt(x_diff**2+y_diff**2)
+    np.fill_diagonal(r,1)
+    toc = time.perf_counter()
+    print("\tconstruct r: " ,toc-tic)
+
+    a_b = a[:,None]
+    A_b = A[:,None]
+    B_b = B[:,None]
+
+    tic = time.perf_counter()
+    X = 4*(a_b/r)*A_b + (A_b-4*B_b)*((a_b**3*(r**2-3*z**2))/(r**5))      
+    np.fill_diagonal(X,1)
+    toc = time.perf_counter()
+    print("\tcalculate X: " ,toc-tic)           
+    
+    tic = time.perf_counter()
+    lu, piv = scipy.linalg.lu_factor(X)
+    dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)*1000
+    toc = time.perf_counter()
+    print("\tsolve system: " ,toc-tic) 
+
     return dVdt
 
 def WrayFabricant(x,y,a,dVdt_iso):
@@ -589,16 +651,12 @@ def WrayFabricant(x,y,a,dVdt_iso):
     return dVdt # return theoretical flux values
 
 
-def getIsolated(A,B,C, mm,T, H, Rb, CA, rho_liquid, D):
+def getIsolated(csat, H, Rb, CA, rho_liquid, D):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
     
-    T_kelvin = T +273.15
-    #Cv=saturation_vapour_density(T_kelvin)
-    psat = Psat(A,B,C,T)
-    csat = ideal_gas_law(psat, T, mm)
-    dmdt_env = D*csat*(1-H) # Calculate enviomental component of flux.
+    dmdt_env = D*csat*(1-H) # Calculate envionmental component of flux.
     f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
     dmdt_geom = np.pi*Rb*f_theta 
     dmdt=dmdt_env*dmdt_geom 
@@ -612,6 +670,15 @@ def Psat(A,B,C,T):
         T: Temperature (oC)"""
     psat = 10**(A-(B/(C+T)))*(101325/760)
     return psat
+
+def gas_density(ABCs, mms, phis, T):
+    """Get density of mixtures, T in degrees C."""
+    ps = np.empty([len(mms)])
+    for idx, i in enumerate(ABCs):
+        ps[idx] = Psat(*i,T)
+    rho = (((101325+np.sum(-1*(ps*phis)))*0.02897)+np.sum(phis*ps*mms))/(8.314*(T+273.15))
+    return rho
+
 
 def ideal_gas_law(P,T,Mm):
     """Calculates the vapour density (kg.m-3) using the ideal gas law.
@@ -750,9 +817,9 @@ def Compare2Data(tResults, eResults, cmap_name):
     f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"scatter.png"))
     f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"te_tau.png"))
     f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"taur.png"))
-    f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"scatter.svg"))
-    f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"te_tau.svg"))
-    f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"taur.svg"))
+    # f_2hm.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"scatter.svg"))
+    # f_lin.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"te_tau.svg"))
+    # f_dt.savefig(os.path.join(tResults['RunTimeInputs']['Directory'], tResults['RunTimeInputs']['Filename']+"taur.svg"))
     
     plt.show()
     return
