@@ -651,12 +651,12 @@ def WrayFabricant(x,y,a,dVdt_iso):
     return dVdt # return theoretical flux values
 
 
-def getIsolated(csat, H, Rb, CA, rho_liquid, D):
+def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
-    
-    dmdt_env = D*csat*(1-H) # Calculate envionmental component of flux.
+    phi_sat = kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
+    dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
     f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
     dmdt_geom = np.pi*Rb*f_theta 
     dmdt=dmdt_env*dmdt_geom 
@@ -679,6 +679,14 @@ def gas_density(ABCs, mms, phis, T):
     rho = (((101325+np.sum(-1*(ps*phis)))*0.02897)+np.sum(phis*ps*mms))/(8.314*(T+273.15))
     return rho
 
+def kohler(n,Mm,sigma,T,rho,radius):
+    """Kohler theory calculating the vapour pressures variation due to:
+    The Kelvin effect and The Raoult effect."""
+    Di = radius*2 # diameter (m)
+    kelvin = (4*Mm*sigma)/(8.314*(T+273.15)*rho*Di)
+    Raoult = (6*n*Mm)/(np.pi*rho*Di**3)
+    p_eq = np.exp(kelvin-Raoult)
+    return p_eq
 
 def ideal_gas_law(P,T,Mm):
     """Calculates the vapour density (kg.m-3) using the ideal gas law.
@@ -688,6 +696,7 @@ def ideal_gas_law(P,T,Mm):
     nbyV=P/(8.314*(T+273.15))
     concentration = nbyV*Mm
     return concentration
+
 
 def dynamic_humidity(box_volume,molar_mass,A,B,C,T,rho, V_evap):
     psat = Psat(A,B,C, T-273.15)

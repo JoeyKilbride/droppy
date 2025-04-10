@@ -85,9 +85,11 @@ def MasoudEvaporate(RunTimeInputs):
         
     #CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot)
     centres=list(zip(list(xcentres),list(ycentres)))
-    csat        = dpy.gas_density(RunTimeInputs['Antoine_coeffs'], RunTimeInputs['molar_masses'], [1]+RunTimeInputs['Ambient_RHs'][1:], RunTimeInputs['Ambient_T'])
+    csat        = dpy.ideal_gas_law(dpy.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
+
     dVdt_iso    = dpy.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D']) # Using Hu & Larson 2002 eqn. 19
+                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
     rand_evap = np.random.normal(0, RunTimeInputs['rand'], len(dVdt_iso))/100
     dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
     if plot:
@@ -119,7 +121,7 @@ def MasoudEvaporate(RunTimeInputs):
     
     if RunTimeInputs['model'] == "Wray":
          dVdt_new=dpy.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])
-    csat        = dpy.ideal_gas_law(dpy.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0]) # dpy.gas_density(RunTimeInputs['Antoine_coeffs'], RunTimeInputs['molar_masses'], [1]+RunTimeInputs['Ambient_RHs'][1:], RunTimeInputs['Ambient_T'])
+
     while len(V[alive])>0: # ?Can i make the Vi[alive] and remove the variable V?
         
         print("___________________Remaining Evaporating____________________")
@@ -139,7 +141,8 @@ def MasoudEvaporate(RunTimeInputs):
                 
 
                 dVdt_iso    = dpy.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D']) # Using Hu & Larson 2002 eqn. 19
+                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
     
                 tic = time.perf_counter()
                 dVdt_new = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
@@ -339,6 +342,7 @@ def WrayEvaporate(RunTimeInputs):
     # ax2.set_ylim(ymin, ymax)
 
     centres=list(zip(list(xcentres),list(ycentres)))
+
     dVdt_iso    = dpy.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
     cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, 'gnuplot2_r', centres,r0, RunTimeInputs['CA']*(180/np.pi),0,90, True)
     cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, 'seismic_r', centres,r0, np.zeros(RunTimeInputs['DNum']),max(-dVdt_iso)*-100,max(-dVdt_iso)*100, True)

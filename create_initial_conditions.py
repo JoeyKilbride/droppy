@@ -44,8 +44,9 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['box_volume'] = c.box_volume
     RunTimeInputs['rho_liquid'] = c.rho_liquid
     RunTimeInputs['molar_masses'] = c.molar_masses
+    RunTimeInputs['surface_tension'] = c.surface_tension
     RunTimeInputs['Vi'] = dpy.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
-    print("initial volumes= ", RunTimeInputs['Vi'])
+    print("Total volume= ", np.sum(RunTimeInputs['Vi']), " (L)")
     
     return RunTimeInputs, c.saving, c.compare, c.cmap_name
 
