@@ -19,6 +19,9 @@ matplotlib_axes_logger.setLevel('ERROR')
 from copy import deepcopy
 import timeit
 import time
+import cv2
+from io import BytesIO
+from PIL import Image
 
 #from scipy.special import legendre
 #from matplotlib.animation import FFMpegWriter
@@ -763,6 +766,64 @@ def read_imageJ_coords(directory, filename):
     rs = np.min(XY, axis=0)/2
     print("1. Droplet centres retrieved")
     return data, XY, rs, dr
+
+def export_video(DTM_data, odpi=200, number_of_frames=10, cmap_name='jet'):
+    unique_drying_times = np.unique(DTM_data['t_evap'])
+    max_time = np.max(unique_drying_times)+DTM_data['RunTimeInputs']['dt']
+
+    times = np.linspace(0,max_time,number_of_frames)
+    xs = DTM_data['RunTimeInputs']['xcentres']
+    ys = DTM_data['RunTimeInputs']['ycentres']
+    width, height = int(12.80*odpi), int(10.40*odpi)
+    out = cv2.VideoWriter(os.path.join(DTM_data['RunTimeInputs']['Directory'], DTM_data['RunTimeInputs']['Filename']+"video.avi"), cv2.VideoWriter_fourcc(*'MJPG'), 25, (width,height))
+    current_backend = plt.get_backend()
+    plt.switch_backend('Agg')
+    # Create a figure (no need to show it)
+    fig, ax = plt.subplots()  # match size
+    centres=list(zip(list(xs*1e6),list(ys*1e6)))
+
+    vmax = [0,np.max(DTM_data["RunTimeInputs"]["CA"])*180/np.pi]
+    cmap1, normcmap1, collection1=CreateDroplets(ax, fig, cmap_name, centres, 
+                                                    DTM_data['RunTimeInputs']['Rb']*1e6, DTM_data["RunTimeInputs"]["CA"]*180/np.pi, vmax[0], vmax[1], False)
+    
+
+    title = fig.suptitle("")
+    for tdx, t in enumerate(times):
+        
+        
+        print("writing frame: ", tdx+1, "/"+str(number_of_frames))
+        t_i = np.argmin(abs(DTM_data['Time']-t))
+
+        if DTM_data['RunTimeInputs']['mode']=="CCR":
+            theta = DTM_data["Theta"][t_i,:]
+            UpdateDroplets(ax, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
+            title.set_text(f"t = {t:.2f} (s)")
+
+        else:
+            ax.clear()
+            r0 = DTM_data["Radius"][t_i,:]
+            CreateDroplets(ax, fig, cmap_name, centres, r0*1e6, DTM_data["RunTimeInputs"]["CA"]*180/np.pi, vmax[0], vmax[1], False)
+            title.set_text(f"t = {t:.2f}")
+    
+        plt.tight_layout(pad=0)
+        # Save the figure to a buffer
+        buf = BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0, dpi=odpi)
+        buf.seek(0)
+
+        # Convert buffer to image
+        img = Image.open(buf)
+        img = img.convert('RGB')  # remove alpha if present
+        img = img.resize((width, height))  # ensure size matches
+        frame = np.array(img)
+        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+        out.write(frame_bgr)
+
+    out.release()
+    print("exported")
+    plt.switch_backend(current_backend)
+    return    
 
 def Compare2Data(tResults, eResults, cmap_name):
     """Comparing drying time results from MDL and MDLT code outputs. 

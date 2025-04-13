@@ -45,7 +45,7 @@ def MasoudEvaporate(RunTimeInputs):
     print("_____________________________________________")
       
 
-    plot=True
+    plot=False
     # Ready the troops
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']
@@ -81,19 +81,20 @@ def MasoudEvaporate(RunTimeInputs):
         plt.title("Droplet Layout")
 
         cmtype1='gnuplot2_r'
-        cmtype2='jet'
+        cmtype2='Spectral'
         
     #CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot)
     centres=list(zip(list(xcentres),list(ycentres)))
+    
     csat        = dpy.ideal_gas_law(dpy.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
 
     dVdt_iso    = dpy.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
                                             RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'], ) # Using Hu & Larson 2002 eqn. 19
     rand_evap = np.random.normal(0, RunTimeInputs['rand'], len(dVdt_iso))/100
     dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
     if plot:
-        vmax1 = [0,90]
+        vmax1 = [0,np.max(theta)*180/np.pi]
         vmax2 = [max(dVdt_iso),abs(max(dVdt_iso))]
         cmap1, normcmap1, collection1=dpy.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
         cmap2, normcmap2, collection2=dpy.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
@@ -158,7 +159,7 @@ def MasoudEvaporate(RunTimeInputs):
             
             if np.sum(transient_droplets)>0: # if any transient droplets
                 if RunTimeInputs['model'] == "Masoud":
-                    dVdt_transient[alive_prev], I, RM    = dpy.Masoud_fast(xcentres[alive_prev], 
+                    dVdt_transient[alive_prev]  = dpy.Masoud_fast(xcentres[alive_prev], 
                                                 ycentres[alive_prev], r0[alive_prev], 
                                                 dVdt_iso[alive_prev], theta[alive_prev])
                 if RunTimeInputs['model'] == "Wray":
@@ -182,6 +183,8 @@ def MasoudEvaporate(RunTimeInputs):
             dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
+            print(r"$\Delta V/V$", max((dVdt[alive]*dt)/Vi[alive]))
+            
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
                 print("RH = ","{:.2f}".format(RH*100),"%")

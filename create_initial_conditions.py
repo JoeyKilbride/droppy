@@ -3,6 +3,7 @@ import droppy as dpy
 import numpy as np
 import The_Models as mod
 import sys
+import os
 #sys.path.insert(0, r'\\NTU-DPM-CTY.ads.ntu.ac.uk\ERD160_projects$\aaaa_Joey\Scripts') # Windows
 sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/') # Mac
 print("path:", sys.path)
@@ -34,6 +35,7 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['nterms'] = c.nterms
     RunTimeInputs['mode']=c.mode
     RunTimeInputs['rand']=c.rand
+
     if c.D=="water":
         RunTimeInputs['D']=dpy.diffusion_coeff(c.Ambient_T)
     else:
@@ -48,7 +50,7 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['Vi'] = dpy.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     print("Total volume= ", np.sum(RunTimeInputs['Vi']), " (L)")
     
-    return RunTimeInputs, c.saving, c.compare, c.cmap_name
+    return RunTimeInputs, c.saving, c.compare, c.cmap_name, c.dpi, c.export_nframes
 
 # ==================USER INPUTS============================================
 
@@ -81,7 +83,7 @@ directory = input('Enter a file path: ')
         # molar_mass : molar mass of the liquid (kg/mol)
 
 for i in range(1):
-    RunTimeInputs, saving, compare, cmap_name = create_initial_conditions(i,directory)
+    RunTimeInputs, saving, compare, cmap_name, set_dpi, export_nframes = create_initial_conditions(i,directory)
     Results = mod.MasoudEvaporate(RunTimeInputs)
     
     # if RunTimeInputs['model'] == "Wray":
@@ -93,6 +95,8 @@ for i in range(1):
         # break
     if saving:
         dpy.ReportResults(Results, cmap_name, RunTimeInputs['model'])
+        name = os.path.join(directory,'video')
+        dpy.export_video(Results, number_of_frames=export_nframes, odpi=set_dpi, cmap_name='jet')
     if compare:
         eResults = dpy.load_MDL_pickle(RunTimeInputs['Directory'])
         if 'sort' in list(RunTimeInputs.keys()):
