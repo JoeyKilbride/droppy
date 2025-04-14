@@ -89,7 +89,7 @@ def MasoudEvaporate(RunTimeInputs):
     cflat        = dpy.ideal_gas_law(dpy.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
     drdt_iso = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
                         r0, cflat, RH, theta, RunTimeInputs['D'])
-    dVdt_iso=drdt_iso*np.pi*r[alive]**2*(2+np.cos(theta[alive]))*(1-np.cos(theta[alive]))**2
+    dVdt_iso=drdt_iso*np.pi*(r0/np.sin(theta))**2*(2+np.cos(theta))*(1-np.cos(theta))**2
     # dVdt_iso    = dpy.getIsolated(cflt ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
     #                                         RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
     #                                         RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'], ) # Using Hu & Larson 2002 eqn. 19
