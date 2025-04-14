@@ -86,13 +86,15 @@ def MasoudEvaporate(RunTimeInputs):
     #CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot)
     centres=list(zip(list(xcentres),list(ycentres)))
     
-    csat        = dpy.ideal_gas_law(dpy.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
-
-    dVdt_iso    = dpy.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'], ) # Using Hu & Larson 2002 eqn. 19
-    rand_evap = np.random.normal(0, RunTimeInputs['rand'], len(dVdt_iso))/100
-    dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
+    cflat        = dpy.ideal_gas_law(dpy.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
+    drdt_iso = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
+                        r0, cflat, RH, theta, RunTimeInputs['D'])
+    
+    # dVdt_iso    = dpy.getIsolated(cflt ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
+    #                                         RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+    #                                         RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'], ) # Using Hu & Larson 2002 eqn. 19
+    # rand_evap = np.random.normal(0, RunTimeInputs['rand'], len(drdt_iso))/100
+    # dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
     if plot:
         vmax1 = [0,np.max(theta)*180/np.pi]
         vmax2 = [max(dVdt_iso),abs(max(dVdt_iso))]
@@ -140,16 +142,33 @@ def MasoudEvaporate(RunTimeInputs):
 
             if RunTimeInputs['model'] == "Masoud":
                 
-
-                dVdt_iso    = dpy.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
+                r=r0/np.sin(theta)
+                drdt_iso = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
+                        r, cflat, RH, theta, RunTimeInputs['D'])
     
                 tic = time.perf_counter()
-                dVdt_new = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
+                if RunTimeInputs['mode']=='CCA':
+                    
+                    k1 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive], drdt_iso[alive], theta[alive])
+                    inc1 = dt*k1/2
+                    drdt_iso1 = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
+                        r+inc1, cflat, RH, theta, RunTimeInputs['D'])
+                    k2 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc1, drdt_iso1[alive], theta[alive])
+                    inc2 = dt*k2/2
+                    drdt_iso2 = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
+                        r+inc2, cflat, RH, theta, RunTimeInputs['D'])
+                    k3 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc2, drdt_iso2[alive], theta[alive])
+                    inc3 = dt*k3
+                    drdt_iso3 = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
+                        r+inc3, cflat, RH, theta, RunTimeInputs['D'])
+                    drdt_new = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc3, drdt_iso3[alive], theta[alive])
+                    
+                else:
+
                 toc = time.perf_counter()
                 print("t_invert: " ,toc-tic)
-                dVdt_new=dVdt_new+(dVdt_new*rand_evap[alive])
+                dVdt_new = drdt_new*np.pi*r[alive]**2*(2+np.cos(theta[alive]))*(1-np.cos(theta[alive]))**2
+                
                 #dVdt_WF     = WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07)
                 dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets 
 
@@ -158,15 +177,16 @@ def MasoudEvaporate(RunTimeInputs):
             dVdt        = np.where(Vi!=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
             
             if np.sum(transient_droplets)>0: # if any transient droplets
+
                 if RunTimeInputs['model'] == "Masoud":
                     dVdt_transient[alive_prev]  = dpy.Masoud_fast(xcentres[alive_prev], 
                                                 ycentres[alive_prev], r0[alive_prev], 
-                                                dVdt_iso[alive_prev], theta[alive_prev])
+                                                drdt_iso[alive_prev], theta[alive_prev])
                 if RunTimeInputs['model'] == "Wray":
                     dVdt_new=dpy.WrayFabricant(xcentres[alive_prev], 
                                                ycentres[alive_prev], 
                                                r0[alive_prev], 
-                                               dVdt_iso[alive_prev])# F0 in m/s (was 3.15e-07)
+                                               drdt_iso[alive_prev])# F0 in m/s (was 3.15e-07)
                 
                     
                 dVdt[transient_droplets] = deepcopy(dVdt_transient[transient_droplets])

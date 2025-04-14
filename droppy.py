@@ -316,10 +316,10 @@ def ReportResults(Results, cmap_name, which_model):
     fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.png"))
     fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.png"))
     fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.png"))
-    fig_V.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_V.svg"))
-    fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.svg"))
-    fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.svg"))
-    fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.svg"))
+    # fig_V.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_V.svg"))
+    # fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.svg"))
+    # fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.svg"))
+    # fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.svg"))
     #fig_tevap.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_tevap.png"))
     Resultsfile = open(os.path.join(Results['RunTimeInputs']['Directory'],which_model+"_"+Results['RunTimeInputs']['Filename']+'.pkl'), 'wb')
     Results['t_evap'] = t_evap
@@ -566,7 +566,7 @@ def GetRoC(r_base,h):
 #     dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)*1000
 #     return dVdt
 
-def Masoud_fast(x, y, a, dVdt_iso, CA):
+def Masoud_fast(x, y, r, dVdt_iso, CA):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
@@ -589,9 +589,9 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
     B=VintB(CA)
     
     tic = time.perf_counter()
-    Rij = a/np.sin(CA)
-    hij = Rij-(a/np.tan(CA))
-    zi = Rij - hij/3
+    a = r*np.sin(CA)
+    hij = r-(a/np.tan(CA))
+    zi = r - hij/3
     z = np.abs(zi[:, None] - zi[None, :]) # difference between geometric centres in z
     toc = time.perf_counter()
     print("\tcalculate z: " ,toc-tic)
@@ -599,7 +599,7 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
     tic = time.perf_counter()
     x_diff = x[:,None]-x[None,:]
     y_diff = y[:,None]-y[None,:]
-    r = np.sqrt(x_diff**2+y_diff**2)
+    rdx = np.sqrt(x_diff**2+y_diff**2)
     np.fill_diagonal(r,1)
     toc = time.perf_counter()
     print("\tconstruct r: " ,toc-tic)
@@ -609,7 +609,7 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
     B_b = B[:,None]
 
     tic = time.perf_counter()
-    X = 4*(a_b/r)*A_b + (A_b-4*B_b)*((a_b**3*(r**2-3*z**2))/(r**5))      
+    X = 4*(a_b/rdx)*A_b + (A_b-4*B_b)*((a_b**3*(rdx**2-3*z**2))/(rdx**5))      
     np.fill_diagonal(X,1)
     toc = time.perf_counter()
     print("\tcalculate X: " ,toc-tic)           
@@ -654,18 +654,27 @@ def WrayFabricant(x,y,a,dVdt_iso):
     return dVdt # return theoretical flux values
 
 
-def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T):
+def getIsolated(dC, r, CA, rho_liquid, D):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
-    phi_sat = kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
-    dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
-    f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
-    dmdt_geom = np.pi*Rb*f_theta 
-    dmdt=dmdt_env*dmdt_geom 
-    dVdt_isolated=-(dmdt/rho_liquid) # m3/s - Convention is to have -dVdt as evaporation
     
-    return dVdt_isolated
+    dmdt_env = D*dC # Calculate envionmental component of flux.
+    dmdt_geom =  2/np.sqrt(1+np.cos(CA))
+    drdt_isolated=-(dmdt_env*dmdt_geom)/(rho_liquid*r*((2+np.cos(CA))*(1-np.cos(CA))**2))
+    
+    return drdt_isolated
+
+def Iso(T,sigma,molar_mass,rho_liquid, r, cflat, RH, CA, D):
+    """Calculates the isolated droplet evaporation rate of a droplet accounting for the 
+    Kelvin and Raoult effects."""
+    
+    phi_sat = kohler(0,molar_mass,sigma,T,rho_liquid,r)
+    
+    dC = (phi_sat-RH)*cflat
+    drdt_iso      = getIsolated(dC, r, CA, rho_liquid, D) # Using Hu & Larson 2002 eqn. 19
+     
+    return drdt_iso
 
 def Psat(A,B,C,T):
     """Saturation vapour pressure using the Antoine equation.
