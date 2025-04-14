@@ -89,7 +89,7 @@ def MasoudEvaporate(RunTimeInputs):
     cflat        = dpy.ideal_gas_law(dpy.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
     drdt_iso = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
                         r0, cflat, RH, theta, RunTimeInputs['D'])
-    
+    dVdt_iso=drdt_iso*np.pi*r[alive]**2*(2+np.cos(theta[alive]))*(1-np.cos(theta[alive]))**2
     # dVdt_iso    = dpy.getIsolated(cflt ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
     #                                         RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
     #                                         RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'], ) # Using Hu & Larson 2002 eqn. 19
@@ -143,12 +143,11 @@ def MasoudEvaporate(RunTimeInputs):
             if RunTimeInputs['model'] == "Masoud":
                 
                 r=r0/np.sin(theta)
-                drdt_iso = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
-                        r, cflat, RH, theta, RunTimeInputs['D'])
-    
+        
                 tic = time.perf_counter()
                 if RunTimeInputs['mode']=='CCA':
-                    
+                    drdt_iso = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
+                        r, cflat, RH, theta, RunTimeInputs['D'])
                     k1 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive], drdt_iso[alive], theta[alive])
                     inc1 = dt*k1/2
                     drdt_iso1 = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
@@ -164,7 +163,8 @@ def MasoudEvaporate(RunTimeInputs):
                     drdt_new = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc3, drdt_iso3[alive], theta[alive])
                     
                 else:
-
+                    print("Warning: CCR not implemented")
+                    exit()
                 toc = time.perf_counter()
                 print("t_invert: " ,toc-tic)
                 dVdt_new = drdt_new*np.pi*r[alive]**2*(2+np.cos(theta[alive]))*(1-np.cos(theta[alive]))**2
