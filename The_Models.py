@@ -134,7 +134,7 @@ def MasoudEvaporate(RunTimeInputs):
                 dVdt[alive] = deepcopy(dV/dt*bias[alive]) # update new evaporation rates for living droplets
                 
                 toc = time.perf_counter()
-                print("t_invert: " ,toc-tic)
+                print(" Inversion (s): ","{:.2f}".format(toc-tic))
             if RunTimeInputs['model'] == 'Wray':
                 dVdt[alive] = deepcopy(dVdt_new[alive]*bias[alive]) # update new evaporation rates for living droplets
             dVdt        = np.where(Vi!=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
@@ -198,7 +198,7 @@ def MasoudEvaporate(RunTimeInputs):
     
             transient_times[transient_droplets]=np.array([math.fsum([x,dt]) for x in transient_times[transient_droplets]])
             transient_droplets = transient_times<0 # update transient droplets
-            print("| "+str(t)+" ",end="", flush=True)
+            print("{:.3f}".format(t),end="", flush=True)
        
         
         gone        = Vi<=ZERO
