@@ -45,7 +45,7 @@ def MasoudEvaporate(RunTimeInputs):
     print("_____________________________________________")
       
 
-    plot=True
+    plot=False
     # Ready the troops
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']
@@ -167,7 +167,7 @@ def MasoudEvaporate(RunTimeInputs):
             Vi[idx_alive_dead]=0.0
 
             r0 = dpy.GetBase(theta, Vi)
-            print(r"$\Delta V/V$", max((dVdt*dt)/Vi))
+            # print(r"$\Delta V/V$", max((dVdt*dt)/Vi))
             
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
