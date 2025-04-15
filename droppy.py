@@ -434,7 +434,6 @@ def GetVolumeCA(CA, r_base):
     """Calculates volume of a spherical cap from Contact angle (rads)
     and base radius (m). Returns V in L."""
     V=(np.pi/3)*((r_base/np.sin(CA))**3) *(2+np.cos(CA))*((1-np.cos(CA))**2)
-    V=V*1000 # m3 -> L
     return V
 def GetBase(CA, V):
     """Calculates Rb (m) of a spherical cap from Contact angle (rads)
@@ -447,7 +446,6 @@ def GetVolume(height, r_base):
     #print("rbase=",r_base)
     V=(1/6)*np.pi*height*(3*r_base**2+height**2) # m^3
     #print("Volume in function = ",V)
-    V=V*1000 # Convert to litres
     return V
 
 def BondNumber(del_rho,L,gamma):
@@ -514,6 +512,31 @@ def GetRoC(r_base,h):
     return (h**2+r_base**2)/(2*h)
 
 # Droplet evaporation functions *********************************
+
+def RK4_solve(r0, theta, Vi, alive, x, y, dVdt_iso, constants, dt):
+    c_inc = [1/2,1/2,1,0]
+    ki = np.zeros([4,len(Vi[alive])])
+    dead = np.full([4,len(Vi[alive])], False)
+    inc=0
+    for _ in range(4):
+        Vi_inc = Vi[alive]+inc
+        dead[_,:] = Vi_inc<=0.0
+        if np.logical_and(len(dead[_,:])==1,dead[_,0]==True):
+            return np.array([0.0]), np.array([True])
+        Vi_inc=np.where(np.any(dead[:,:], axis=0)==True,0,Vi_inc)
+        r0 = GetBase(theta[alive], Vi_inc)
+        dVdt_iso    = getIsolated(r0, theta[alive], *constants) # Using Hu & Larson 2002 eqn. 19 
+        if np.any(np.isnan(dVdt_iso)):   
+            dVdt_iso = np.nan_to_num(dVdt_iso, nan=0.0)
+        ki[_,:] = Masoud_fast(x[alive], y[alive], r0, dVdt_iso, theta[alive])
+        inc = c_inc[_]*dt*ki[_,:]
+        
+    dead = np.any(dead[:,:], axis=0)
+    dV = (dt/6)*(ki[0,:]+2*ki[1,:]+2*ki[2,:]+ki[3,:])
+    dV[dead]=0
+
+    return dV, dead
+    
 
 # def Masoud(x, y, a, dVdt_iso, CA, terms):
 #     """Calculating Masoud et al. 2020 theoretical evaporation
@@ -588,38 +611,26 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
     VintB= np.vectorize(intB2)
     B=VintB(CA)
     
-    tic = time.perf_counter()
     Rij = a/np.sin(CA)
     hij = Rij-(a/np.tan(CA))
     zi = Rij - hij/3
     z = np.abs(zi[:, None] - zi[None, :]) # difference between geometric centres in z
-    toc = time.perf_counter()
-    print("\tcalculate z: " ,toc-tic)
 
-    tic = time.perf_counter()
     x_diff = x[:,None]-x[None,:]
     y_diff = y[:,None]-y[None,:]
     r = np.sqrt(x_diff**2+y_diff**2)
     np.fill_diagonal(r,1)
-    toc = time.perf_counter()
-    print("\tconstruct r: " ,toc-tic)
 
     a_b = a[:,None]
     A_b = A[:,None]
     B_b = B[:,None]
 
-    tic = time.perf_counter()
     X = 4*(a_b/r)*A_b + (A_b-4*B_b)*((a_b**3*(r**2-3*z**2))/(r**5))      
-    np.fill_diagonal(X,1)
-    toc = time.perf_counter()
-    print("\tcalculate X: " ,toc-tic)           
-    
-    tic = time.perf_counter()
-    lu, piv = scipy.linalg.lu_factor(X)
-    dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)*1000
-    toc = time.perf_counter()
-    print("\tsolve system: " ,toc-tic) 
+    np.fill_diagonal(X,1)     
 
+    lu, piv = scipy.linalg.lu_factor(X)
+    dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)
+ 
     return dVdt
 
 def WrayFabricant(x,y,a,dVdt_iso):
@@ -654,7 +665,7 @@ def WrayFabricant(x,y,a,dVdt_iso):
     return dVdt # return theoretical flux values
 
 
-def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T):
+def getIsolated(Rb, CA, csat, H,  rho_liquid, D, Mm, sigma, T):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
