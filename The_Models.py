@@ -45,7 +45,7 @@ def MasoudEvaporate(RunTimeInputs):
     print("_____________________________________________")
       
 
-    plot=False
+    plot=True
     # Ready the troops
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']
@@ -87,8 +87,9 @@ def MasoudEvaporate(RunTimeInputs):
     centres=list(zip(list(xcentres),list(ycentres)))
     
     cflat        = dpy.ideal_gas_law(dpy.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
+    r=r0/np.sin(theta)
     drdt_iso = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
-                        r0, cflat, RH, theta, RunTimeInputs['D'])
+                        r, cflat, RH, theta, RunTimeInputs['D'])
     dVdt_iso=drdt_iso*np.pi*(r0/np.sin(theta))**2*(2+np.cos(theta))*(1-np.cos(theta))**2
     # dVdt_iso    = dpy.getIsolated(cflt ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
     #                                         RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
@@ -131,10 +132,10 @@ def MasoudEvaporate(RunTimeInputs):
         
         while not(any(Vi[alive] <= ZERO)):
             if (RunTimeInputs['mode'] == "CCR"):
-                theta = dpy.GetCAfromV(Vi/1000, r0, ZERO)  
+                theta = dpy.GetCAfromV(Vi, r0, ZERO)  
                 #print("Contact Angle (\u00B0)= ", theta*180/np.pi)
             elif (RunTimeInputs['mode'] == "CCA"):
-                r0 = dpy.GetBase(theta, Vi/1000)
+                r0 = dpy.GetBase(theta, Vi)
                 #print("Base radius (m)= ", r0)
                          
 
@@ -147,63 +148,81 @@ def MasoudEvaporate(RunTimeInputs):
                 tic = time.perf_counter()
                 if RunTimeInputs['mode']=='CCA':
                     drdt_iso = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
-                        r, cflat, RH, theta, RunTimeInputs['D'])
-                    k1 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive], drdt_iso[alive], theta[alive])
+                        r[alive], cflat, RH, theta[alive], RunTimeInputs['D'])
+                    print("\tdrdt_iso: ", drdt_iso)
+                    k1 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive], drdt_iso, theta[alive])
+                    
                     inc1 = dt*k1/2
                     drdt_iso1 = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
-                        r+inc1, cflat, RH, theta, RunTimeInputs['D'])
-                    k2 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc1, drdt_iso1[alive], theta[alive])
+                        r[alive]+inc1, cflat, RH, theta[alive], RunTimeInputs['D'])
+                    k2 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc1, drdt_iso1, theta[alive])
                     inc2 = dt*k2/2
                     drdt_iso2 = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
-                        r+inc2, cflat, RH, theta, RunTimeInputs['D'])
-                    k3 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc2, drdt_iso2[alive], theta[alive])
+                        r[alive]+inc2, cflat, RH, theta[alive], RunTimeInputs['D'])
+                    k3 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc2, drdt_iso2, theta[alive])
                     inc3 = dt*k3
                     drdt_iso3 = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
-                        r+inc3, cflat, RH, theta, RunTimeInputs['D'])
-                    drdt_new = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc3, drdt_iso3[alive], theta[alive])
+                        r[alive]+inc3, cflat, RH, theta[alive], RunTimeInputs['D'])
+                    k4 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive]+inc3, drdt_iso3, theta[alive])
                     
                 else:
                     print("Warning: CCR not implemented")
                     exit()
                 toc = time.perf_counter()
-                print("t_invert: " ,toc-tic)
-                dVdt_new = drdt_new*np.pi*r[alive]**2*(2+np.cos(theta[alive]))*(1-np.cos(theta[alive]))**2
+                print("\tt(inversion): " ,toc-tic)
+                # dVdt_new = drdt_new*np.pi*r[alive]**2*(2+np.cos(theta[alive]))*(1-np.cos(theta[alive]))**2
                 
                 #dVdt_WF     = WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07)
-                dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets 
+                # dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets 
 
-            if RunTimeInputs['model'] == 'Wray':
-                dVdt[alive] = deepcopy(dVdt_new[alive]*bias[alive]) # update new evaporation rates for living droplets
-            dVdt        = np.where(Vi!=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
+            # if RunTimeInputs['model'] == 'Wray':
+            #     dVdt[alive] = deepcopy(dVdt_new[alive]*bias[alive]) # update new evaporation rates for living droplets
+            # dVdt        = np.where(Vi!=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
             
-            if np.sum(transient_droplets)>0: # if any transient droplets
+            # if np.sum(transient_droplets)>0: # if any transient droplets
 
-                if RunTimeInputs['model'] == "Masoud":
-                    dVdt_transient[alive_prev]  = dpy.Masoud_fast(xcentres[alive_prev], 
-                                                ycentres[alive_prev], r0[alive_prev], 
-                                                drdt_iso[alive_prev], theta[alive_prev])
-                if RunTimeInputs['model'] == "Wray":
-                    dVdt_new=dpy.WrayFabricant(xcentres[alive_prev], 
-                                               ycentres[alive_prev], 
-                                               r0[alive_prev], 
-                                               drdt_iso[alive_prev])# F0 in m/s (was 3.15e-07)
+            #     if RunTimeInputs['model'] == "Masoud":
+            #         dVdt_transient[alive_prev]  = dpy.Masoud_fast(xcentres[alive_prev], 
+            #                                     ycentres[alive_prev], r0[alive_prev], 
+            #                                     drdt_iso[alive_prev], theta[alive_prev])
+            #     if RunTimeInputs['model'] == "Wray":
+            #         dVdt_new=dpy.WrayFabricant(xcentres[alive_prev], 
+            #                                    ycentres[alive_prev], 
+            #                                    r0[alive_prev], 
+            #                                    drdt_iso[alive_prev])# F0 in m/s (was 3.15e-07)
                 
                     
-                dVdt[transient_droplets] = deepcopy(dVdt_transient[transient_droplets])
-            # plt.figure()
-            # plt.scatter(RM[0,:], I[0,:])
-            # plt.scatter(RM[10,:], I[10,:])
-            # plt.scatter(RM[100,:], I[100,:])
-            # plt.show()
+                # dVdt[transient_droplets] = deepcopy(dVdt_transient[transient_droplets])
+
+            
             t_i     = np.vstack([t_i, t]) # record time steps
             V_t     = np.vstack([V_t, Vi]) # add new volumes to array
-            r0_t    = np.vstack([r0_t, r0])
             theta_t = np.vstack([theta_t, theta*180/np.pi])
-            
+
+            drdt_alive = (dt/6)*(k1+2*k2+2*k3+k4)/dt
+            if np.any(drdt_alive>0):
+                print("NOW time=", t)
+            dVdt_alive = drdt_alive*np.pi*r[alive]**2*(2+np.cos(theta[alive]))*(1-np.cos(theta[alive]))**2
+            dVdt = np.zeros(len(r))
+            dVdt[alive]=dVdt_alive
             dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
+            
             t        = math.fsum([t,dt])
-            Vi       = Vprev+(dVdt*dt)
-            print(r"$\Delta V/V$", max((dVdt[alive]*dt)/Vi[alive]))
+            
+            r_alive = r[alive] + (dt/6)*(k1+2*k2+2*k3+k4)
+            r=np.zeros(len(r))
+            r[alive]=r_alive
+            r0 = r*np.sin(theta) # radius of curvature -> base radius
+            r0_t    = np.vstack([r0_t, r0]) # base radius
+            Vi= dpy.GetVolumeCAr(theta, r)
+        
+            # print(r"dV/V: ", max((dVdt[alive]*dt)/Vi[alive]))
+            print("\tVi: ",Vi)
+            print("\tVolume: ", Vi)
+            print("\tdVdt: ", dVdt)
+            print("\tdrdt: ", drdt_alive)
+            print("\tr: ", r)
+            print("\tdr: ", (dt/6)*(k1+2*k2+2*k3+k4))
             
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
@@ -242,7 +261,7 @@ def MasoudEvaporate(RunTimeInputs):
             print("| "+str(t)+" ",end="", flush=True)
         
         gone        = Vi<=ZERO
-        alive_prev=deepcopy(alive)
+        # alive_prev=deepcopy(alive)
         alive       = Vi>ZERO
         N_alive = len(Vi[alive])
         gone_record = np.vstack([gone_record, gone])
@@ -264,14 +283,14 @@ def MasoudEvaporate(RunTimeInputs):
     V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
     t_i = np.vstack([t_i, t]) # add final times to array
     if (RunTimeInputs['mode'] == "CCR"):
-        theta = dpy.GetCAfromV(Vi/1000, r0, ZERO) 
+        theta = dpy.GetCAfromV(Vi, r0, ZERO) 
         theta_t= np.vstack([theta_t, theta*180/np.pi])
         # update final plot
         if plot:
             dpy.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
             dpy.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt,r0, t)
     elif (RunTimeInputs['mode'] == "CCA"):
-        r0 = dpy.GetBase(theta, Vi/1000)
+        r0 = dpy.GetBase(theta, Vi)
         r0_t    = np.vstack([r0_t, r0])
         if plot:    
             # update final plot

@@ -432,9 +432,15 @@ def depositTriangle_NOTWORKING(N,s,ca,Rb):
 
 def GetVolumeCA(CA, r_base):
     """Calculates volume of a spherical cap from Contact angle (rads)
-    and base radius (m). Returns V in L."""
+    and base radius (m). Returns V in m3."""
     V=(np.pi/3)*((r_base/np.sin(CA))**3) *(2+np.cos(CA))*((1-np.cos(CA))**2)
-    V=V*1000 # m3 -> L
+    
+    return V
+
+def GetVolumeCAr(CA, r):
+    """Calculates volume of a spherical cap from Contact angle (rads)
+    and base radius (m). Returns V in m3."""
+    V=(np.pi/3)*(r**3) *(2+np.cos(CA))*((1-np.cos(CA))**2) 
     return V
 def GetBase(CA, V):
     """Calculates Rb (m) of a spherical cap from Contact angle (rads)
@@ -447,7 +453,6 @@ def GetVolume(height, r_base):
     #print("rbase=",r_base)
     V=(1/6)*np.pi*height*(3*r_base**2+height**2) # m^3
     #print("Volume in function = ",V)
-    V=V*1000 # Convert to litres
     return V
 
 def BondNumber(del_rho,L,gamma):
@@ -566,7 +571,7 @@ def GetRoC(r_base,h):
 #     dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)*1000
 #     return dVdt
 
-def Masoud_fast(x, y, r, dVdt_iso, CA):
+def Masoud_fast(x, y, r, drdt_iso, CA):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
@@ -588,39 +593,39 @@ def Masoud_fast(x, y, r, dVdt_iso, CA):
     VintB= np.vectorize(intB2)
     B=VintB(CA)
     
-    tic = time.perf_counter()
+    # tic = time.perf_counter()
     a = r*np.sin(CA)
     hij = r-(a/np.tan(CA))
     zi = r - hij/3
     z = np.abs(zi[:, None] - zi[None, :]) # difference between geometric centres in z
-    toc = time.perf_counter()
-    print("\tcalculate z: " ,toc-tic)
+    # toc = time.perf_counter()
+    # print("\tcalculate z: " ,toc-tic)
 
-    tic = time.perf_counter()
+    # tic = time.perf_counter()
     x_diff = x[:,None]-x[None,:]
     y_diff = y[:,None]-y[None,:]
     rdx = np.sqrt(x_diff**2+y_diff**2)
-    np.fill_diagonal(r,1)
-    toc = time.perf_counter()
-    print("\tconstruct r: " ,toc-tic)
+    np.fill_diagonal(rdx,1)
+    # toc = time.perf_counter()
+    # print("\tconstruct r: " ,toc-tic)
 
     a_b = a[:,None]
     A_b = A[:,None]
     B_b = B[:,None]
 
-    tic = time.perf_counter()
+    # tic = time.perf_counter()
     X = 4*(a_b/rdx)*A_b + (A_b-4*B_b)*((a_b**3*(rdx**2-3*z**2))/(rdx**5))      
     np.fill_diagonal(X,1)
-    toc = time.perf_counter()
-    print("\tcalculate X: " ,toc-tic)           
+    # toc = time.perf_counter()
+    # print("\tcalculate X: " ,toc-tic)           
     
-    tic = time.perf_counter()
+    # tic = time.perf_counter()
     lu, piv = scipy.linalg.lu_factor(X)
-    dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)*1000
-    toc = time.perf_counter()
-    print("\tsolve system: " ,toc-tic) 
+    drdt=scipy.linalg.lu_solve((lu,piv),drdt_iso)
+    # toc = time.perf_counter()
+    # print("\tsolve system: " ,toc-tic) 
 
-    return dVdt
+    return drdt
 
 def WrayFabricant(x,y,a,dVdt_iso):
     """Calculating Wray et al. 2020 theoretical
