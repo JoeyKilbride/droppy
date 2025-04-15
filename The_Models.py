@@ -151,7 +151,7 @@ def MasoudEvaporate(RunTimeInputs):
                         r[alive], cflat, RH, theta[alive], RunTimeInputs['D'])
                     print("\tdrdt_iso: ", drdt_iso)
                     k1 = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r[alive], drdt_iso, theta[alive])
-                    
+    
                     inc1 = dt*k1/2
                     drdt_iso1 = dpy.Iso(RunTimeInputs['Ambient_T'], RunTimeInputs['surface_tension'],RunTimeInputs['molar_masses'][0],RunTimeInputs['rho_liquid'],
                         r[alive]+inc1, cflat, RH, theta[alive], RunTimeInputs['D'])
@@ -200,8 +200,7 @@ def MasoudEvaporate(RunTimeInputs):
             theta_t = np.vstack([theta_t, theta*180/np.pi])
 
             drdt_alive = (dt/6)*(k1+2*k2+2*k3+k4)/dt
-            if np.any(drdt_alive>0):
-                print("NOW time=", t)
+            
             dVdt_alive = drdt_alive*np.pi*r[alive]**2*(2+np.cos(theta[alive]))*(1-np.cos(theta[alive]))**2
             dVdt = np.zeros(len(r))
             dVdt[alive]=dVdt_alive
@@ -220,9 +219,8 @@ def MasoudEvaporate(RunTimeInputs):
             print("\tVi: ",Vi)
             print("\tVolume: ", Vi)
             print("\tdVdt: ", dVdt)
-            print("\tdrdt: ", drdt_alive)
             print("\tr: ", r)
-            print("\tdr: ", (dt/6)*(k1+2*k2+2*k3+k4))
+           
             
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:

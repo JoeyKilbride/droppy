@@ -665,7 +665,7 @@ def getIsolated(dC, r, CA, rho_liquid, D):
     liquid density (rho_liquid)."""
     
     dmdt_env = D*dC # Calculate envionmental component of flux.
-    dmdt_geom =  2/np.sqrt(1+np.cos(CA))
+    dmdt_geom = ( 2/np.sqrt(1+np.cos(CA)))*np.sin(CA)
     drdt_isolated=-(dmdt_env*dmdt_geom)/(rho_liquid*r*((2+np.cos(CA))*(1-np.cos(CA))**2))
     
     return drdt_isolated
@@ -675,7 +675,7 @@ def Iso(T,sigma,molar_mass,rho_liquid, r, cflat, RH, CA, D):
     Kelvin and Raoult effects."""
     
     phi_sat = kohler(0,molar_mass,sigma,T,rho_liquid,r)
-    
+    print("phi_sat: ",phi_sat)
     dC = (phi_sat-RH)*cflat
     drdt_iso      = getIsolated(dC, r, CA, rho_liquid, D) # Using Hu & Larson 2002 eqn. 19
      
