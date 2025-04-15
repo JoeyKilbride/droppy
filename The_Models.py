@@ -45,7 +45,7 @@ def MasoudEvaporate(RunTimeInputs):
     print("_____________________________________________")
       
 
-    plot=False
+    plot=True
     # Ready the troops
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']
@@ -144,7 +144,7 @@ def MasoudEvaporate(RunTimeInputs):
                 dVdt_iso    = dpy.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
                                             RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
                                             RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
-    
+                print("Isolated: ",dVdt_iso)
                 tic = time.perf_counter()
                 dVdt_new = dpy.Masoud_fast(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive], theta[alive])
                 toc = time.perf_counter()
