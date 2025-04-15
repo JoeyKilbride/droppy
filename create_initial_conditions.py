@@ -4,6 +4,7 @@ import numpy as np
 import The_Models as mod
 import sys
 import os
+import time
 #sys.path.insert(0, r'\\NTU-DPM-CTY.ads.ntu.ac.uk\ERD160_projects$\aaaa_Joey\Scripts') # Windows
 sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/') # Mac
 print("path:", sys.path)
@@ -84,8 +85,12 @@ directory = input('Enter a file path: ')
 
 for i in range(1):
     RunTimeInputs, saving, compare, cmap_name, set_dpi, export_nframes = create_initial_conditions(i,directory)
-    Results = mod.MasoudEvaporate(RunTimeInputs)
     
+    tic_total = time.perf_counter()
+    Results = mod.MasoudEvaporate(RunTimeInputs)
+    toc_total = time.perf_counter()
+    sim_time = toc_total-tic_total
+    Results['simulation_time']=sim_time
     # if RunTimeInputs['model'] == "Wray":
     #     Results = mod.WrayEvaporate(RunTimeInputs)
     # elif RunTimeInputs['model'] == "Masoud":
