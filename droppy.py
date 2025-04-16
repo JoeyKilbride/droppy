@@ -588,37 +588,25 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
     VintB= np.vectorize(intB2)
     B=VintB(CA)
     
-    tic = time.perf_counter()
     Rij = a/np.sin(CA)
     hij = Rij-(a/np.tan(CA))
     zi = Rij - hij/3
     z = np.abs(zi[:, None] - zi[None, :]) # difference between geometric centres in z
-    toc = time.perf_counter()
-    print("\tcalculate z: " ,toc-tic)
 
-    tic = time.perf_counter()
     x_diff = x[:,None]-x[None,:]
     y_diff = y[:,None]-y[None,:]
     r = np.sqrt(x_diff**2+y_diff**2)
     np.fill_diagonal(r,1)
-    toc = time.perf_counter()
-    print("\tconstruct r: " ,toc-tic)
 
     a_b = a[:,None]
     A_b = A[:,None]
     B_b = B[:,None]
 
-    tic = time.perf_counter()
     X = 4*(a_b/r)*A_b + (A_b-4*B_b)*((a_b**3*(r**2-3*z**2))/(r**5))      
     np.fill_diagonal(X,1)
-    toc = time.perf_counter()
-    print("\tcalculate X: " ,toc-tic)           
     
-    tic = time.perf_counter()
     lu, piv = scipy.linalg.lu_factor(X)
     dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)*1000
-    toc = time.perf_counter()
-    print("\tsolve system: " ,toc-tic) 
 
     return dVdt
 
