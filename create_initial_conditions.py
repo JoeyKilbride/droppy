@@ -55,7 +55,7 @@ def create_initial_conditions(val, directory):
 
 # ==================USER INPUTS============================================
 
-directory = input('Enter a file path: ')
+directory = r"/Users/joeykilbride/Documents/Work/Multiple Droplets PhD/DTM_repo/CCR_debugging" #input('Enter a file path: ')
 #saving = True
 #compare = False
 

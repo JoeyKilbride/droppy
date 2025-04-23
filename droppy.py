@@ -570,27 +570,40 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
-
+    
     def intA(x, CA):
         return (1+ (np.cosh((2*np.pi-CA)*x)/np.cosh(CA*x) ) )**-1
     
     def intA2(CA):
         return scipy.integrate.quad(intA, 0, 100, args=(CA))[0]
 
+    # def intA2_lowCA(CA):
+    #     return scipy.integrate.quad(intA, 0, 100, args=(CA))[0]
+
     def intB(x, CA):
         return ((1+ (np.cosh((2*np.pi-CA)*x)/np.cosh(CA*x) ) )**-1) *x**2
     
     def intB2(CA):
         return scipy.integrate.quad(intB, 0, 100, args=(CA))[0]
-
+    
+    # def intB2_lowCA(CA):
+    #     return scipy.integrate.quad(intB, 0, 100, args=(CA))[0]
+    
+    
     VintA= np.vectorize(intA2)
     A=VintA(CA)
     VintB= np.vectorize(intB2)
     B=VintB(CA)
-    
+    # else:
+    #     VintA= np.vectorize(intA2_lowCA)
+    #     A=VintA(CA)
+    #     VintB= np.vectorize(intB2_lowCA)
+    #     B=VintB(CA)
+
+        
     Rij = a/np.sin(CA)
     hij = Rij-(a/np.tan(CA))
-    zi = Rij - hij/3
+    zi = ((3/4) * ((2*Rij-hij)**2/(3*Rij-hij)) ) - (Rij-hij) #Rij - hij/3
     z = np.abs(zi[:, None] - zi[None, :]) # difference between geometric centres in z
 
     x_diff = x[:,None]-x[None,:]
@@ -646,7 +659,7 @@ def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
-    phi_sat = kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
+    phi_sat = 1.#kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
     dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
     f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
     dmdt_geom = np.pi*Rb*f_theta 
@@ -783,6 +796,7 @@ def export_video(DTM_data, odpi=200, number_of_frames=10, cmap_name='jet'):
         t_i = np.argmin(abs(DTM_data['Time']-t))
 
         if DTM_data['RunTimeInputs']['mode']=="CCR":
+            r0=DTM_data['RunTimeInputs']['Rb']
             theta = DTM_data["Theta"][t_i,:]
             UpdateDroplets(ax, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
             title.set_text(f"t = {t:.2f} (s)")
