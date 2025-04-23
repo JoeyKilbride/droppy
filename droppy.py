@@ -613,7 +613,7 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
     
     Rij = a/np.sin(CA)
     hij = Rij-(a/np.tan(CA))
-    zi = Rij - hij/3
+    zi = ((3/4) * ((2*Rij-hij)**2/(3*Rij-hij)) ) - (Rij-hij)
     z = np.abs(zi[:, None] - zi[None, :]) # difference between geometric centres in z
 
     x_diff = x[:,None]-x[None,:]
