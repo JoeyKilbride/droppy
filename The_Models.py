@@ -45,7 +45,7 @@ def MasoudEvaporate(RunTimeInputs):
     print("_____________________________________________")
       
 
-    plot=True
+    plot=False
     # Ready the troops
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']
