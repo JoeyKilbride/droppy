@@ -90,7 +90,7 @@ def MasoudEvaporate(RunTimeInputs):
 
     dVdt_iso    = dpy.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
                                             RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'], ) # Using Hu & Larson 2002 eqn. 19
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
     rand_evap = np.random.normal(0, RunTimeInputs['rand'], len(dVdt_iso))/100
     dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
     if plot:

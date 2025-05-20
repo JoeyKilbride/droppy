@@ -659,7 +659,7 @@ def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
-    phi_sat = 1.#kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
+    phi_sat = kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
     dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
     f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
     dmdt_geom = np.pi*Rb*f_theta 
