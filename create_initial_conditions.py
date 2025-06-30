@@ -56,6 +56,7 @@ def create_initial_conditions(val, directory):
 # ==================USER INPUTS============================================
 
 directory = input('Enter a file path: ')
+
 #saving = True
 #compare = False
 
