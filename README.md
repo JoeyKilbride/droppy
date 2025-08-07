@@ -48,7 +48,7 @@ To install the project clone (or download) the repo.
 
 ### Requirements
 
-Most modern version of python 3 should work. There are quite a few required python packages which can be installed with `pip install package_name`. The packages are as follows:
+Most modern version of python 3 should work. There are quite a few required python packages which can be installed with `pip install -r requirements.txt`. The packages are as follows:
 - numpy
 - matplotlib
 - scipy
@@ -90,6 +90,7 @@ Once the code has terminated, as long as `saving = True`, it will display some d
 
 # Contact
 For questions bug reporting and help email me joey.kilbride@ed.ac.uk.
+
 
 
 
