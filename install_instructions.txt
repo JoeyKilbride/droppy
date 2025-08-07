@@ -1,7 +1,0 @@
-git clone https://github.com/JoeyKilbride/Multiple-Droplets-Theory-Models.git DTM_repo
-copy DTM_config.py file in repo to another directory and configure variables to desired
-How to run from terminal:
-1. copy DTM_config.py file in repo to another directory and configure variables to desired
-2. cd to DTM_repo directory in terminal
-3. python create_initial_conditions.py
-4. input directory of edited DTM_config.py when prompted 
