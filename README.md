@@ -82,7 +82,7 @@ pip install -r requirements.txt
    - Change prefix to a decription of the simulation ie. "example"
    A Full decription of each other variable is given as comments in the file. Should run as is, for testing. 
 
-3. Use python to run 'create_initial_conditions.py' in your prefered way.
+3. Use python to run 'initialise.py' in your prefered way.
 4. Enter when prompted the directory you created in step 1 (containing the 'DTM_config.py').
 5. If everything has been set correctly it will start simulating the evaporation of the specified droplets.
    By default this is a 3 droplet line.
@@ -95,6 +95,7 @@ https://orcid.org/0000-0002-3699-6079
 
 # Acknowledgement
 If you make use of the code please cite: DropPy, J.J. Kilbride. (2025)
+
 
 
 
