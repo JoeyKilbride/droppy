@@ -1,4 +1,4 @@
-# 📦 DropPy
+# 💦 DropPy
 
 > This code uses analytic expressions to calculate the evaporation rate of an arbitrary array of droplets on a surface. It then numerically evolves the initialised array of droplets based on these calculated evaporation rates. The droplets evaporate in a diffusion-limited manner in an isothermal environment. For full details of the two analytical models implemented in "The_Models.py" see: <br />
 - Wray et al. 2020: doi.org/10.1017/jfm.2019.919 <br />
@@ -95,6 +95,7 @@ https://orcid.org/0000-0002-3699-6079
 
 # Acknowledgement
 If you make use of the code please cite: DropPy, J.J. Kilbride. (2025)
+
 
 
 
