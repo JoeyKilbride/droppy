@@ -1,12 +1,16 @@
 # This is a example configuration file required to run the DTM code.
 # Every variable in this file must be specified and updated for each simulation.
-# J. Kilbride - 10/10/23
+# J. Kilbride - 07/08/25#
 
 import sys
 sys.path.insert(0, r'DIR OF THE CODE')
 #sys.path.insert(0, r'DIRECTORY TO /MDL_repo')
 #import MDL_processing as MDL
-import droppy as dpy
+
+## Uncomment below to use functions from other files to load droplet data
+# import physics_methods as pm
+# import io_methods as iom
+# import visualisation_methods as vm
 import numpy as np
 
 prefix    = "PREFIX FOR OUTPUT FILES"
@@ -27,7 +31,7 @@ dpi=100
 export_nframes=30
 filter_touching = False # filters out droplets which are touching (potentially not working!)
 dt = 1             # timestep size (s)
-Ambient_RH = [0.25] # Fraction [0-1]
+Ambient_RHs = [0.25] # Fraction [0-1]
 Ambient_T = 22   # Degrees C
 t=0                   # initial time (s) - should alway be zero (probably should be removed)
 model="Masoud"           # which model to simulate with "Wray" or "Masoud (Wray may need updating)"
@@ -43,3 +47,4 @@ molar_masses = [0.01801528] # molar mass of the liquid (kg/mol) (this is water)
 bg=None # gradient of linear bias 
 bp=None # point of last droplet to evaporate
 rand=0 # leave in most cases
+p_rate=0 # print rate in droplets/ second - 0 means all iniitalised at t=0.
