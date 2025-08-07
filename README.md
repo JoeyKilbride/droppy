@@ -1,4 +1,4 @@
-# 📦 Multiple-Droplets
+# 📦 DropPy
 
 > This code uses analytic expressions to calculate the evaporation rate of an arbitrary array of droplets on a surface. It then numerically evolves the initialised array of droplets based on these calculated evaporation rates. The droplets evaporate in a diffusion-limited manner in an isothermal environment. For full details of the two analytical models implemented in "The_Models.py" see: <br />
 - Wray et al. 2020: doi.org/10.1017/jfm.2019.919 <br />
@@ -10,12 +10,13 @@
 
 - [About](#-about)
 - [Features](#-features)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Configuration](#-configuration)
-- [Screenshots](#-screenshots)
-- [License](#-license)
-- [Contact](#-contact)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Screenshots](#screenshots)
+- [License](#license)
+- [Contact](#contact)
+- [Acknowledgement](#acknowledgement)
 
 ---
 
@@ -39,7 +40,7 @@ To install the project clone (or download) the repo.
 
 ### Using the terminal
 1. Open the terminal and cd to the preferred installation directory. ie. `cd C:\User\documents` (windows), `cd /user/name/documents` (Mac).
-2. Then clone with: `git clone https://github.com/JoeyKilbride/Multiple-Droplets-Theory-Models.git DTM_repo`.
+2. Then clone with: `git clone https://github.com/JoeyKilbride/Multiple-Droplets-Theory-Models.git droppy_repo`.
 
 ### Using Zip 
 1. Click green code button.
@@ -48,7 +49,7 @@ To install the project clone (or download) the repo.
 
 ### Requirements
 
-Most modern version of python 3 should work. There are quite a few required python packages which can be installed with `pip install package_name`. The packages are as follows:
+Most modern version of python 3 should work. There are quite a few required python packages which can be installed with `pip install -r requirements.txt`. The packages are as follows:
 - numpy
 - matplotlib
 - scipy
@@ -77,7 +78,7 @@ pip install -r requirements.txt
 ## How to use
 1. create a folder and copy 'DTM_config_template.py' into it and rename -> 'DTM_config.py'.
    This file contains all the parameters which must be specified to run the code. It contains the specifics about where each droplet is positioned, each droplets size, liquid and gas           constants etc.
-   - Change sys.path.insert(0, r'DIR OF THE CODE') -> sys.path.insert(0, r'/user/name/documents/DTM_repo'), or wherever you saved DTM_repo in installation.
+   - Change sys.path.insert(0, r'DIR OF THE CODE') -> sys.path.insert(0, r'/user/name/documents/droppy_repo'), or wherever you saved DTM_repo in installation.
    - Change prefix to a decription of the simulation ie. "example"
    A Full decription of each other variable is given as comments in the file. Should run as is, for testing. 
 
@@ -90,6 +91,12 @@ Once the code has terminated, as long as `saving = True`, it will display some d
 
 # Contact
 For questions bug reporting and help email me joey.kilbride@ed.ac.uk.
+https://orcid.org/0000-0002-3699-6079
+
+# Acknowledgement
+If you make use of the code please cite: DropPy, J.J. Kilbride. (2025)
+
+
 
 
 
