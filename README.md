@@ -10,12 +10,13 @@
 
 - [About](#-about)
 - [Features](#-features)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Configuration](#-configuration)
-- [Screenshots](#-screenshots)
-- [License](#-license)
-- [Contact](#-contact)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Screenshots](#screenshots)
+- [License](#license)
+- [Contact](#contact)
+- [Acknowledgement](#acknowledgement)
 
 ---
 
@@ -90,6 +91,9 @@ Once the code has terminated, as long as `saving = True`, it will display some d
 
 # Contact
 For questions bug reporting and help email me joey.kilbride@ed.ac.uk.
+
+# Acknowledgement
+If you make use of the code please cite: Project name, J.J. Kilbride. (2025)
 
 
 
