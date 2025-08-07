@@ -5,14 +5,12 @@ import The_Models as mod
 import sys
 import os
 import time
-#sys.path.insert(0, r'\\NTU-DPM-CTY.ads.ntu.ac.uk\ERD160_projects$\aaaa_Joey\Scripts') # Windows
-sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/') # Mac
-print("path:", sys.path)
 
 def create_initial_conditions(val, directory):
     """Function for writing dictionary initial conditions for Wray or Masoud 
     scripts."""
-    c = dpy.read_config(directory, "DTM_config")
+    print("input directory: ",directory)
+    c = dpy.read_config(os.path.join(directory), "DTM_config")
     if c.filter_touching == True:
         c.CX, c.CY, c.Rb, c.CA = dpy.TouchingCircles(c.CX,c.CY,c.Rb,c.CA)
 
@@ -36,6 +34,7 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['nterms'] = c.nterms
     RunTimeInputs['mode']=c.mode
     RunTimeInputs['rand']=c.rand
+    RunTimeInputs['p_rate']=c.p_rate
 
     if c.D=="water":
         RunTimeInputs['D']=dpy.diffusion_coeff(c.Ambient_T)
