@@ -34,8 +34,14 @@ from PIL import Image
 
 
 # General functions ******************************************************
-def normalise(arr):
-    arr_norm = arr/np.max(arr)
+def normalise(arr, by='max'):
+    """by: max, min or mean"""
+    if by=='mean':
+        arr_norm = arr/np.mean(arr)
+    elif by=='min':
+        arr_norm = arr/np.min(arr)
+    else:
+        arr_norm = arr/np.max(arr)
     return arr_norm
 
 def get_radial_position(X, Y, xref, yref):
@@ -79,6 +85,50 @@ def TouchingCircles(cx,cy,r, ca):
     Rb=r[touching]
     CA=ca[touching]  
     return CX, CY, Rb, CA
+
+def circular_sort(X, Y):
+    rdx = np.sqrt((X-np.mean(X))**2+(Y-np.mean(Y))**2)
+    sort = np.argsort(rdx)
+    print(sort)
+    Xs = np.array(X)[sort]
+    print("Xs= ",len(Xs))
+    Ys = np.array(Y)[sort]
+    plt.scatter(Xs,Ys,c='k')
+    plt.show()
+    print("Xs: ",len(Xs))
+    Xss = []
+    Yss = []
+    rdx = np.sqrt((Xs-np.mean(Xs))**2+(Ys-np.mean(Ys))**2)
+    rdx_min = np.min(np.sqrt((Xs[0]-Xs[1:])**2+(Ys[0]-Ys[1:])**2))
+    inc = rdx_min/2
+    for b in np.arange(0,np.max(rdx)*1.01,inc):
+        print(b)
+        band = np.where(np.logical_and(rdx>=b,rdx<b+inc))
+        if len(band[0])>0:
+            Xm = Xs[band]
+            Ym = Ys[band]
+            theta  = np.arctan2(Ym,Xm)
+            theta_sort = np.argsort(theta)
+            plt.scatter(Xs, Ys, c='k')
+            plt.scatter(Xm,Ym, c=theta, cmap='hot')
+            theta = np.linspace(0, 2 * np.pi, 300)
+            ellipse_x = b * np.cos(theta)
+            ellipse_y = b * np.sin(theta)
+            plt.plot(ellipse_x, ellipse_y, color='red', linewidth=2, label="Ellipse Boundary")
+            ellipse_x = (b+inc) * np.cos(theta)
+            ellipse_y = (b+inc) * np.sin(theta)
+            plt.plot(ellipse_x, ellipse_y, color='red', linewidth=2, label="Ellipse Boundary")
+            plt.show()
+            Xss = Xss + list(Xm[theta_sort])
+            Yss = Yss + list(Ym[theta_sort])
+    
+    print("Xss: ", len(Xss))
+    plt.scatter(Xss,Yss, c=range(0,len(Yss)), cmap='hot')
+    for idx, i in enumerate(Xss):
+        plt.text(Xss[idx],Yss[idx], str(idx))
+    plt.show()
+    return np.array(Xss), np.array(Yss)
+
 
 # IO functions ************************************************************
 def ReadSVGFile(directory, filename):
@@ -400,6 +450,54 @@ def depositTriangle(N,s,a):
             counter =counter+1
         Ny=Ny-1
     return X, Y
+
+def hexagonal_grid_in_ellipse(a, b, s):
+    """
+    Generate hexagonal grid points inside an ellipse centered at (0,0) with semi-axes a and b.
+    
+    Parameters:
+        a (float): Semi-major axis of the ellipse.
+        b (float): Semi-minor axis of the ellipse.
+        s (float): Spacing between points.
+        
+    Returns:
+        tuple of lists: Two lists containing x and y coordinates of points inside the ellipse.
+    """
+    x_points = []
+    y_points = []
+    x_out = []
+    y_out = []
+    dx = s
+    dy = np.sqrt(3) / 2 * s  # Vertical spacing for hexagonal grid
+    
+    # Define grid boundaries
+    x_range = np.arange(-a-3*(dx/2), a + 3*(dx/2), dx)
+    y_range = np.arange(-b - 3*(dy/2), b + 3*(dy/2), dy)
+    xm = np.mean(x_range)
+    ym = np.mean(y_range)
+
+    # insures the points are symmetrix about
+    x_range = x_range - xm  # y=0
+    y_range = y_range - ym # x=0
+
+    for i, y in enumerate(y_range):
+        offset = (i % 2) * (s / 2)  # Offset every other row
+        for x in x_range:
+            x_pos = x + offset
+            x_points.append(x_pos)
+            y_points.append(y)
+    
+    xm = np.mean(x_points)
+    ym = np.mean(y_points)
+    r_closest = np.argmin(np.sqrt((x_points-xm)**2+(y_points-ym)**2))
+    x_points = x_points - x_points[r_closest]
+    y_points = y_points - y_points[r_closest]
+    for pdx, point in enumerate(x_points):
+        if (point**2 / a**2 + y_points[pdx]**2 / b**2) <= 1.00:  # Inside ellipse condition
+            x_out.append(point)
+            y_out.append(y_points[pdx])
+
+    return np.array(x_out), np.array(y_out)
 
 def depositTriangle_NOTWORKING(N,s,ca,Rb):
     side=(N-1)*s
@@ -781,11 +879,11 @@ def export_video(DTM_data, odpi=200, number_of_frames=10, cmap_name='jet'):
     plt.switch_backend('Agg')
     # Create a figure (no need to show it)
     fig, ax = plt.subplots()  # match size
-    centres=list(zip(list(xs*1e6),list(ys*1e6)))
-
+    printed = DTM_data["t_print"]==0
+    centres=list(zip(list(xs[printed]*1e6),list(ys[printed]*1e6)))
     vmax = [0,np.max(DTM_data["RunTimeInputs"]["CA"])*180/np.pi]
     cmap1, normcmap1, collection1=CreateDroplets(ax, fig, cmap_name, centres, 
-                                                    DTM_data['RunTimeInputs']['Rb']*1e6, DTM_data["RunTimeInputs"]["CA"]*180/np.pi, vmax[0], vmax[1], False)
+                                                    DTM_data['RunTimeInputs']['Rb'][printed]*1e6, DTM_data["RunTimeInputs"]["CA"][printed]*180/np.pi, vmax[0], vmax[1], False)
     
 
     title = fig.suptitle("")
@@ -794,17 +892,18 @@ def export_video(DTM_data, odpi=200, number_of_frames=10, cmap_name='jet'):
         
         print("writing frame: ", tdx+1, "/"+str(number_of_frames))
         t_i = np.argmin(abs(DTM_data['Time']-t))
-
+        printed = DTM_data["t_print"]<=t_i
+        centres=list(zip(list(xs[printed]*1e6),list(ys[printed]*1e6)))
         if DTM_data['RunTimeInputs']['mode']=="CCR":
-            r0=DTM_data['RunTimeInputs']['Rb']
-            theta = DTM_data["Theta"][t_i,:]
+            r0=DTM_data['RunTimeInputs']['Rb'][printed]
+            theta = DTM_data["Theta"][t_i,:][printed]
             UpdateDroplets(ax, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
             title.set_text(f"t = {t:.2f} (s)")
 
         else:
             ax.clear()
-            r0 = DTM_data["Radius"][t_i,:]
-            CreateDroplets(ax, fig, cmap_name, centres, r0*1e6, DTM_data["RunTimeInputs"]["CA"]*180/np.pi, vmax[0], vmax[1], False)
+            r0 = DTM_data["Radius"][t_i,:][printed]
+            CreateDroplets(ax, fig, cmap_name, centres, r0*1e6, DTM_data["RunTimeInputs"]["CA"][printed]*180/np.pi, vmax[0], vmax[1], False)
             title.set_text(f"t = {t:.2f}")
     
         plt.tight_layout(pad=0)
