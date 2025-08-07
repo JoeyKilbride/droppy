@@ -77,7 +77,7 @@ pip install -r requirements.txt
 ## How to use
 1. create a folder and copy 'DTM_config_template.py' into it and rename -> 'DTM_config.py'.
    This file contains all the parameters which must be specified to run the code. It contains the specifics about where each droplet is positioned, each droplets size, liquid and gas           constants etc.
-   - Change sys.path.insert(0, r'DIR OF THE CODE') -> sys.path.insert(0, r'/user/name/documents'), or wherever you saved DTM_repo in installation.
+   - Change sys.path.insert(0, r'DIR OF THE CODE') -> sys.path.insert(0, r'/user/name/documents/DTM_repo'), or wherever you saved DTM_repo in installation.
    - Change prefix to a decription of the simulation ie. "example"
    A Full decription of each other variable is given as comments in the file. Should run as is, for testing. 
 
@@ -90,5 +90,6 @@ Once the code has terminated, as long as `saving = True`, it will display some d
 
 # Contact
 For questions bug reporting and help email me joey.kilbride@ed.ac.uk.
+
 
 
