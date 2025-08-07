@@ -4,20 +4,20 @@
 
 import sys
 sys.path.insert(0, r'DIR OF THE CODE')
-#sys.path.insert(0, r'/Volumes/ERD160_projects$/aaaa_Joey/Scripts/MDL_repo')
-import droppy as dpy
+#sys.path.insert(0, r'DIRECTORY TO /MDL_repo')
 #import MDL_processing as MDL
+import droppy as dpy
 import numpy as np
 
 prefix    = "PREFIX FOR OUTPUT FILES"
 directory = r'OPERATION DIRECTORY'
-#CX,CY,CA,Rb = dpy.depositSquare(2,3,np.pi/2,1e-3)
-
+#CX,CY,CA,Rb = dpy.depositSquare(N,s,ca,Rb)
+#CX,CY,CA,Rb = depositLine(N,s,ca,Rb)
 # defining a 3 droplet line #________________________
-CX = np.array([-3,0,3])/1000
-CY = np.array([0,0,0])
-Rb = np.ones(len(CX))/1000
-CA = np.ones(len(CX))*np.pi/2
+CX = np.array([-3,0,3])/1000 # X coordinates of the droplets (m)
+CY = np.array([0,0,0]) # Y coordinates of the droplets (m)
+Rb = np.ones(len(CX))/1000 # Base contact radius of the droplets (m)
+CA = np.ones(len(CX))*np.pi/2 # Initial contact angle of the droplets (rads)
 #____________________________________________________
 
 saving = True # Boolean for saving graphs and pickles with the results
