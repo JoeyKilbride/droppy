@@ -12,6 +12,24 @@ import sys
 import importlib
 import glob
 import pickle
+import xml.etree.ElementTree as ET
+
+def read_svg_circles(svg_path):
+    tree = ET.parse(svg_path)
+    root = tree.getroot()
+    
+    # These lists will store the cx, cy, and r values
+    cx_vals = []
+    cy_vals = []
+    r_vals = []
+    
+    # Find all <circle> elements in the SVG
+    for circle in root.iter('{http://www.w3.org/2000/svg}circle'):
+        cx_vals.append(float(circle.get('cx')))
+        cy_vals.append(float(circle.get('cy')))
+        r_vals.append(float(circle.get('r')))
+    
+    return cx_vals, cy_vals, r_vals
 
 
 def ReadSVGFile(directory, filename):

@@ -160,7 +160,7 @@ def ReportResults(Results, cmap_name, which_model):
     plt.show()
     return
 
-def export_video(DTM_data, odpi=200, number_of_frames=10, cmap_name='jet'):
+def export_video(DTM_data, odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
     unique_drying_times = np.unique(DTM_data['t_evap'])
     max_time = np.max(unique_drying_times)+DTM_data['RunTimeInputs']['dt']
 
@@ -168,7 +168,7 @@ def export_video(DTM_data, odpi=200, number_of_frames=10, cmap_name='jet'):
     xs = DTM_data['RunTimeInputs']['xcentres']
     ys = DTM_data['RunTimeInputs']['ycentres']
     width, height = int(12.80*odpi), int(10.40*odpi)
-    out = cv2.VideoWriter(os.path.join(DTM_data['RunTimeInputs']['Directory'], DTM_data['RunTimeInputs']['Filename']+"video.avi"), cv2.VideoWriter_fourcc(*'MJPG'), 25, (width,height))
+    out = cv2.VideoWriter(os.path.join(DTM_data['RunTimeInputs']['Directory'], DTM_data['RunTimeInputs']['Filename']+"video.avi"), cv2.VideoWriter_fourcc(*'MJPG'), vid_FPS, (width,height))
     current_backend = plt.get_backend()
     plt.switch_backend('Agg')
     # Create a figure (no need to show it)

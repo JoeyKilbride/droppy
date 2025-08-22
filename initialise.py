@@ -45,6 +45,7 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['rand']=c.rand
     RunTimeInputs['p_rate']=c.p_rate
 
+
     if c.D=="water":
         RunTimeInputs['D']=pm.diffusion_coeff(c.Ambient_T)
     else:
@@ -59,12 +60,12 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['Vi'] = pm.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     print("Total volume= ", np.sum(RunTimeInputs['Vi']), " (L)")
     
-    return RunTimeInputs, c.saving, c.compare, c.cmap_name, c.dpi, c.export_nframes
+    return RunTimeInputs, c.saving, c.compare, c.cmap_name, c.dpi, c.vid_FPS, c.export_nframes
 
 directory = input('Enter a file path: ')
 
 for i in range(1):
-    RunTimeInputs, saving, compare, cmap_name, set_dpi, export_nframes = create_initial_conditions(i,directory)
+    RunTimeInputs, saving, compare, cmap_name, set_dpi ,set_FPS,export_nframes = create_initial_conditions(i,directory)
     
     tic = time.perf_counter()
     Results = mod.Iterate(RunTimeInputs)
@@ -74,7 +75,7 @@ for i in range(1):
     if saving:
         vm.ReportResults(Results, cmap_name, RunTimeInputs['model'])
         name = os.path.join(directory,'video')
-        vm.export_video(Results, number_of_frames=export_nframes, odpi=set_dpi, cmap_name='jet')
+        vm.export_video(Results, number_of_frames=export_nframes, odpi=set_dpi, vid_FPS = set_FPS, cmap_name='jet')
     if compare:
         eResults = iom.load_MDL_pickle(RunTimeInputs['Directory'])
         if 'sort' in list(RunTimeInputs.keys()):
