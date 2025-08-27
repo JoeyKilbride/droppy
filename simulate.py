@@ -156,7 +156,7 @@ def Iterate(RunTimeInputs):
             dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
-            print(r"$\Delta V/V$", max((dVdt[alive]*dt)/Vi[alive]))
+            print(r"dV/V: ", max((dVdt[alive]*dt)/Vi[alive]))
             print(Vi)
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
@@ -202,7 +202,7 @@ def Iterate(RunTimeInputs):
         printed = t_print<=t
         has_V   = Vi>ZERO
         alive   = np.logical_and(has_V,printed)
-        print(Vi)
+        print("Volume evaporated: ", 100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])), "%")
         N_alive = len(Vi[alive])
         gone_record = np.vstack([gone_record, gone])
         
