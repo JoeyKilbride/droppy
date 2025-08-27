@@ -157,7 +157,7 @@ def Iterate(RunTimeInputs):
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
             print(r"dV/V: ", max((dVdt[alive]*dt)/Vi[alive]))
-            print(Vi)
+            print("Volume remaining: ", 100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])), "%")
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
                 print("RH = ","{:.2f}".format(RH*100),"%")
@@ -202,7 +202,7 @@ def Iterate(RunTimeInputs):
         printed = t_print<=t
         has_V   = Vi>ZERO
         alive   = np.logical_and(has_V,printed)
-        print("Volume evaporated: ", 100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])), "%")
+        
         N_alive = len(Vi[alive])
         gone_record = np.vstack([gone_record, gone])
         
