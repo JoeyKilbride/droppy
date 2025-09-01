@@ -108,6 +108,25 @@ def circular_sort(X, Y):
     plt.show()
     return np.array(Xss), np.array(Yss)
 
+def rectangle_points(length, width, s):
+    """
+    Generate a grid of points inside a rectangle.
+
+    Parameters:
+        length (float): Length of the rectangle (x-direction).
+        width (float): Width of the rectangle (y-direction).
+        s (float): Spacing between points.
+
+    Returns:
+        (np.ndarray, np.ndarray): Arrays of x and y coordinates.
+    """
+    x_coords = np.arange(0, length + s, s)
+    y_coords = np.arange(0, width + s, s)
+
+    X, Y = np.meshgrid(x_coords, y_coords, indexing="xy")
+
+    return X.ravel(), Y.ravel()
+
 
 def add_bias(xb,yb,x,y, bias_gradient):
     b_ang = np.arctan2(yb,xb)
@@ -402,7 +421,7 @@ def WrayFabricant(x,y,a,dVdt_iso):
                 X[idx,jdx] = 1
             else:
                
-                X[idx,jdx] = (2/np.pi) * (a[jdx]/a[idx])**2 * np.arcsin(a[idx]/r[idx,jdx])   # equation (3.2) from the paper - poly-volume droplets
+                X[idx,jdx] = (2/np.pi) * np.arcsin(a[idx]/r[idx,jdx])   # equation (3.2) from the paper - poly-volume droplets
                     #X[idx,jdx] =  (2/np.pi) * np.arcsin(a[idx]/r[idx,jdx])
     #Y = linalg.inv(X)        # inverse of the matrix...next step, calculate the flux
     #dVdt = dot(Y,dVdt_iso)*1000 # L/s: dot prod sums up all contributions - lab book 03/09/21
@@ -416,7 +435,13 @@ def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
-    phi_sat = kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
+
+    if np.any(CA==0):
+        r = np.where(CA==0,Rb,Rb/np.sin(CA))
+        phi_sat = kohler(0,Mm,sigma,T,rho_liquid, r)
+    else:
+        phi_sat = kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
+
     dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
     f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
     dmdt_geom = np.pi*Rb*f_theta 

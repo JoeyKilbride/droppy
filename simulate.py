@@ -66,10 +66,14 @@ def Iterate(RunTimeInputs):
     centres=list(zip(list(xcentres),list(ycentres)))
     
     csat        = pm.ideal_gas_law(pm.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
-
-    dVdt_iso    = pm.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
+    if RunTimeInputs['model'] == "Wray":
+        dVdt_iso    = pm.getIsolated(csat ,RH, r0, 0, RunTimeInputs['rho_liquid'], 
+                                        RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
+    if RunTimeInputs['model'] == "Masoud":
+        dVdt_iso    = pm.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
+                                                RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                                RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
     rand_evap = np.random.normal(0, RunTimeInputs['rand'], len(dVdt_iso))/100
     dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
     if plot:
@@ -127,12 +131,22 @@ def Iterate(RunTimeInputs):
                 dVdt_new = pm.Masoud_fast(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso, theta[alive])
                 
                 toc = time.perf_counter()
-                print("t_invert: " ,toc-tic)
+                print(f"Matrix inversion time: {toc-tic:.3f}s")
                 dVdt_new=dVdt_new+(dVdt_new*rand_evap[alive])
                 dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets 
             
             if RunTimeInputs['model'] == 'Wray':
-                dVdt[alive] = deepcopy(dVdt_new[alive]*bias[alive]) # update new evaporation rates for living droplets
+                if (RunTimeInputs['mode'] == "CCA"):
+                    dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
+                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19    
+                else:
+                    dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
+                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'])
+            
+                dVdt_new=pm.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso)
+                dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets
             dVdt        = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
             
             if np.sum(transient_droplets)>0: # if any transient droplets
@@ -156,8 +170,8 @@ def Iterate(RunTimeInputs):
             dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
-            print(r"dV/V: ", max((dVdt[alive]*dt)/Vi[alive]))
-            print("Volume remaining: ", 100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])), "%")
+            print(f"dV/V: {max((dVdt[alive]*dt)/Vi[alive])*100:.3f}%")
+            print(f"Volume remaining: {100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])):.2f}%")
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
                 print("RH = ","{:.2f}".format(RH*100),"%")
@@ -189,7 +203,7 @@ def Iterate(RunTimeInputs):
             # transient_times[transient_droplets]=np.array([math.fsum([x,dt]) for x in transient_times[transient_droplets]])
             # transient_droplets = transient_times<0 # update transient droplets
             print("| "+str(t)+" ",end="", flush=True)
-
+            print(Vi)
             any_evaporated = np.any(Vi[alive] <= ZERO)
             # print("any_evaporated: ",any_evaporated)
             any_unprinted = np.sum(t_print<=t)>np.sum(printed)
@@ -220,7 +234,8 @@ def Iterate(RunTimeInputs):
         print("_____________________________________________")
     
     loop_end=timeit.default_timer()
-    print("Loop ran for: ",loop_end-loop_start)
+    tloop=(loop_end-loop_start)/60 # mins
+    print(f"Loop ran for: {tloop:2f} mins")
     V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
     t_i = np.vstack([t_i, t]) # add final times to array
     if (RunTimeInputs['mode'] == "CCR"):
@@ -244,7 +259,7 @@ def Iterate(RunTimeInputs):
     dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
     print("_____________________________________________")
     print("Residual Volume error = ", residual)
-    print("Droplets took ",t/60, " mins to evaporate")
+    print(f"Droplets took ,{t/60:.2f} mins to evaporate")
     print("_____________________________________________")
     print(type(V_t))
     MasoudResults={}
