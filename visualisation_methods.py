@@ -153,10 +153,8 @@ def ReportResults(Results, cmap_name, which_model):
     fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.svg"))
     fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.svg"))
     #fig_tevap.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_tevap.png"))
-    Resultsfile = open(os.path.join(Results['RunTimeInputs']['Directory'],which_model+"_"+Results['RunTimeInputs']['Filename']+'.pkl'), 'wb')
     Results['t_evap'] = t_evap
-    pickle.dump(Results, Resultsfile)
-    Resultsfile.close()
+    iom.pickle_dict(Results['RunTimeInputs']['Directory'], which_model+"_"+Results['RunTimeInputs']['Filename'], Results)
     plt.show()
     return
 

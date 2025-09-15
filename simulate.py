@@ -20,7 +20,7 @@ def Iterate(RunTimeInputs):
     print("_____________________________________________")
       
 
-    plot=False
+    plot=True
     # Ready the troops
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']
@@ -69,18 +69,26 @@ def Iterate(RunTimeInputs):
     if RunTimeInputs['model'] == "Wray":
         dVdt_iso    = pm.getIsolated(csat ,RH, r0, 0, RunTimeInputs['rho_liquid'], 
                                         RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
+                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                        RunTimeInputs['n_mols'], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
     if RunTimeInputs['model'] == "Masoud":
         dVdt_iso    = pm.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
                                                 RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                                RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
+                                                RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']
+                                                ,RunTimeInputs['n_mols'], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
     rand_evap = np.random.normal(0, RunTimeInputs['rand'], len(dVdt_iso))/100
     dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
     if plot:
         vmax1 = [0,np.max(theta)*180/np.pi]
-        vmax2 = [max(dVdt_iso),abs(max(dVdt_iso))]
-        cmap1, normcmap1, collection1=pm.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True)
-        cmap2, normcmap2, collection2=pm.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True)#'RdYlGn'
+
+        dVdt_new = pm.Masoud_fast(xcentres, ycentres, r0, dVdt_iso, theta)
+        vmax2 = [min(dVdt_new),max(dVdt_new)]
+        if vmax2[0]>0: # all condensing
+            vmax2[0]=0
+        if vmax2[1]<0: # all evaporating
+            vmax2[1]=0
+        cmap1, normcmap1, collection1=vm.CreateDroplets(ax1, fig, cmtype1, centres, r0, RunTimeInputs['CA']*(180/np.pi),vmax1[0],vmax1[1], True,True)
+        cmap2, normcmap2, collection2=vm.CreateDroplets(ax2, fig, cmtype2, centres, r0, np.zeros(RunTimeInputs['DNum']),vmax2[0],vmax2[1], True,True)#'RdYlGn'
     
     residual=0
     ZERO=0.0 
@@ -111,12 +119,19 @@ def Iterate(RunTimeInputs):
         any_unprinted = len(t_print<=t)>len(printed)
         keep_incrementing = not(np.logical_or(any_evaporated, any_unprinted))
         while keep_incrementing:
-            
+            if t>RunTimeInputs['t_terminate']:
+                print("_________________")
+                print("termination time flagged")
+                terminate=True
+                print("_________________")
+                break
+            else:
+                terminate=False
             if (RunTimeInputs['mode'] == "CCR"):
                 theta = pm.GetCAfromV(Vi/1000, r0, ZERO)  
             elif (RunTimeInputs['mode'] == "CCA"):
                 r0 = pm.GetBase(theta, Vi/1000)
-
+            print("average r: ", np.mean(r0))
             Vprev       = deepcopy(Vi)
 
             if RunTimeInputs['model'] == "Masoud":
@@ -124,7 +139,8 @@ def Iterate(RunTimeInputs):
 
                 dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
                                             RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                            RunTimeInputs['n_mols'][alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
                 
                 tic = time.perf_counter()
          
@@ -139,11 +155,13 @@ def Iterate(RunTimeInputs):
                 if (RunTimeInputs['mode'] == "CCA"):
                     dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
                                             RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']) # Using Hu & Larson 2002 eqn. 19    
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                            RunTimeInputs['n_mols'][alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19    
                 else:
                     dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
                                             RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'])
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                            RunTimeInputs['n_mols'][alive], RunTimeInputs['i'])
             
                 dVdt_new=pm.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso)
                 dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets
@@ -171,10 +189,10 @@ def Iterate(RunTimeInputs):
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
             print(f"dV/V: {max((dVdt[alive]*dt)/Vi[alive])*100:.3f}%")
-            print(f"Volume remaining: {100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])):.2f}%")
+            print(f"Volume remaining: {100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])):.5f}%")
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
-                print("RH = ","{:.2f}".format(RH*100),"%")
+                print("RH = ","{:.5f}".format(RH*100),"%")
                 RH_t    = np.vstack([RH_t, RH]) 
                 RH          = pm.dynamic_humidity(RunTimeInputs['box_volume'],
                                                 RunTimeInputs['molar_masses'][0],
@@ -196,14 +214,14 @@ def Iterate(RunTimeInputs):
                 if plot:
                     ax1.clear()
                     ax2.clear()
-                    vm.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
-                    vm.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
+                    vm.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None,True)
+                    vm.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None, True)
                     plt.pause(0.001)
             
             # transient_times[transient_droplets]=np.array([math.fsum([x,dt]) for x in transient_times[transient_droplets]])
             # transient_droplets = transient_times<0 # update transient droplets
-            print("| "+str(t)+" ",end="", flush=True)
-            print(Vi)
+            print(f"| {t:2f} ",end="", flush=True)
+           
             any_evaporated = np.any(Vi[alive] <= ZERO)
             # print("any_evaporated: ",any_evaporated)
             any_unprinted = np.sum(t_print<=t)>np.sum(printed)
@@ -232,6 +250,8 @@ def Iterate(RunTimeInputs):
         print("\tNo. of evaporating droplets left: ", len(Vi[has_V]))
         print("\tNo. of printed droplets: ", len(Vi[printed]))
         print("_____________________________________________")
+        if terminate:
+            break
     
     loop_end=timeit.default_timer()
     tloop=(loop_end-loop_start)/60 # mins
@@ -252,8 +272,8 @@ def Iterate(RunTimeInputs):
             # update final plot
             ax1.clear()
             ax2.clear()
-            vm.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None)
-            vm.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None)
+            vm.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None, True)
+            vm.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None, True)
             plt.pause(0.001)
 
     dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array

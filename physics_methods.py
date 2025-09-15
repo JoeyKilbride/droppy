@@ -431,16 +431,16 @@ def WrayFabricant(x,y,a,dVdt_iso):
     return dVdt # return theoretical flux values
 
 
-def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T):
+def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T, n=0, i=1):
     """Returns the evaporation rate for an isolated droplet at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
 
     if np.any(CA==0):
         r = np.where(CA==0,Rb,Rb/np.sin(CA))
-        phi_sat = kohler(0,Mm,sigma,T,rho_liquid, r)
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, r, i)
     else:
-        phi_sat = kohler(0,Mm,sigma,T,rho_liquid, Rb/np.sin(CA))
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, Rb/np.sin(CA), i)
 
     dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
     f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
@@ -465,12 +465,12 @@ def gas_density(ABCs, mms, phis, T):
     rho = (((101325+np.sum(-1*(ps*phis)))*0.02897)+np.sum(phis*ps*mms))/(8.314*(T+273.15))
     return rho
 
-def kohler(n,Mm,sigma,T,rho,radius):
+def kohler(n,Mm,sigma,T,rho,radius, i=1):
     """Kohler theory calculating the vapour pressures variation due to:
     The Kelvin effect and The Raoult effect."""
     Di = radius*2 # diameter (m)
     kelvin = (4*Mm*sigma)/(8.314*(T+273.15)*rho*Di)
-    Raoult = (6*n*Mm)/(np.pi*rho*Di**3)
+    Raoult = (6*n*i*Mm)/(np.pi*rho*Di**3)
     p_eq = np.exp(kelvin-Raoult)
     return p_eq
 

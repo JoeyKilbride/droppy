@@ -30,20 +30,23 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['CA']=c.CA                 # as 1D np array (rads)
     RunTimeInputs['xcentres']=c.CX           # as 1D np array ()
     RunTimeInputs['ycentres']=c.CY           # as 1D np array
-    RunTimeInputs['DNum']=len(c.CX)          # total number of droplets in array
+    RunTimeInputs['DNum']=len(c.CX)            # total number of droplets in array
     RunTimeInputs['Ambient_RHs']=c.Ambient_RHs # Fraction [0-1]
-    RunTimeInputs['Ambient_T']=c.Ambient_T   # Degrees C
-    RunTimeInputs['t']=c.t                   # initial time (s)
-    RunTimeInputs['model']=c.model           # which model to simulate with "Wray" or "Masoud"
-    RunTimeInputs['Directory']=directory     # where to save data (absolute, no trailing \)
-    RunTimeInputs['Filename']=filename       # what to call data (no exts)
-    RunTimeInputs['Transient_Length']=c.TL   # delay before updating evap rate (s)
-    RunTimeInputs['bias_point']= c.bp        # xy coords of last point in array to evaporate 1D np array
-    RunTimeInputs['bias_grad'] = c.bg
-    RunTimeInputs['nterms'] = c.nterms
-    RunTimeInputs['mode']=c.mode
-    RunTimeInputs['rand']=c.rand
-    RunTimeInputs['p_rate']=c.p_rate
+    RunTimeInputs['Ambient_T']=c.Ambient_T     # Degrees C
+    RunTimeInputs['t']=c.t                     # initial time (s)
+    RunTimeInputs['model']=c.model             # which model to simulate with "Wray" or "Masoud"
+    RunTimeInputs['Directory']=directory       # where to save data (absolute, no trailing \)
+    RunTimeInputs['Filename']=filename         # what to call data (no exts)
+    RunTimeInputs['Transient_Length']=c.TL     # delay before updating evap rate (s)
+    RunTimeInputs['bias_point']= c.bp          # xy coords of last point in array to evaporate 1D np array
+    RunTimeInputs['bias_grad'] = c.bg          # magnitude of bias
+    RunTimeInputs['nterms'] = c.nterms         # number of terms in Masoud max = 2
+    RunTimeInputs['mode']=c.mode               # evaporation mode CCA or CCR
+    RunTimeInputs['rand']=c.rand               # Randomise evaporation rates 
+    RunTimeInputs['p_rate']=c.p_rate           # rate at which droplets are printed (s-1), 0 is instantaneous
+    RunTimeInputs['t_terminate']=c.t_terminate # max simulation time (s)
+    RunTimeInputs['n_mols'] = c.n_mols         # mols of solute in liquid
+    RunTimeInputs['i'] = c.i                   # Van hoff factor
 
 
     if c.D=="water":

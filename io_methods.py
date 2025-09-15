@@ -175,6 +175,16 @@ def load_MDTM_pickle(directory, prefix=None):
 
     return input_dict
 
+
+def pickle_dict(export_directory, export_name, pickle_file):
+    Resultsfile = open(os.path.join(export_directory, export_name+'.pkl'), 'wb')
+    pickle.dump(pickle_file, Resultsfile)
+    Resultsfile.close()
+    return 
+
+
+
+
 def read_imageJ_coords(directory, filename):
     """Reads ImageJ (FIJI) droplet centre coords."""
     data = np.genfromtxt(os.path.join(directory,filename+".txt"), dtype =(int, int, int, int), skip_header=0, names=True, usecols = (0,1,2,3))
