@@ -12,7 +12,7 @@ matplotlib_axes_logger.setLevel('ERROR')
 
 
 
-def Iterate(RunTimeInputs):
+def Iterate(RunTimeInputs, plot=False):
     """main function."""
     
     print("_____________________________________________")
@@ -20,7 +20,7 @@ def Iterate(RunTimeInputs):
     print("_____________________________________________")
       
 
-    plot=True
+    
     # Ready the troops
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']

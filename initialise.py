@@ -63,15 +63,15 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['Vi'] = pm.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     print("Total volume= ", np.sum(RunTimeInputs['Vi']), " (L)")
     
-    return RunTimeInputs, c.saving, c.compare, c.cmap_name, c.dpi, c.vid_FPS, c.export_nframes
+    return RunTimeInputs, c.saving, c.live_plot, c.compare, c.cmap_name, c.dpi, c.vid_FPS, c.export_nframes
 
 directory = input('Enter a file path: ')
 
 for i in range(1):
-    RunTimeInputs, saving, compare, cmap_name, set_dpi ,set_FPS,export_nframes = create_initial_conditions(i,directory)
+    RunTimeInputs, saving, live_plot, compare, cmap_name, set_dpi ,set_FPS,export_nframes = create_initial_conditions(i,directory)
     
     tic = time.perf_counter()
-    Results = mod.Iterate(RunTimeInputs)
+    Results = mod.Iterate(RunTimeInputs, live_plot)
     toc = time.perf_counter()
     Results['simulation_time']=toc-tic    
 
