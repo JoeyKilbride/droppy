@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 from matplotlib.axes._axes import _log as matplotlib_axes_logger
 from copy import deepcopy
@@ -14,7 +15,8 @@ matplotlib_axes_logger.setLevel('ERROR')
 
 def Iterate(RunTimeInputs, plot=False):
     """main function."""
-    
+    os.environ["OPENBLAS_NUM_THREADS"] = "4"
+
     print("_____________________________________________")
     print("Starting Parameters:")
     print("_____________________________________________")
@@ -65,7 +67,7 @@ def Iterate(RunTimeInputs, plot=False):
         
     centres=list(zip(list(xcentres),list(ycentres)))
     
-    csat        = pm.ideal_gas_law(pm.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
+    csat = pm.ideal_gas_law(pm.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
     if RunTimeInputs['model'] == "Wray":
         dVdt_iso    = pm.getIsolated(csat ,RH, r0, 0, RunTimeInputs['rho_liquid'], 
                                         RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
