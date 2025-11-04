@@ -50,4 +50,5 @@ molar_masses = [0.01801528] # molar mass of the liquid (kg/mol) (this is water)
 bg=None # gradient of linear bias 
 bp=None # point of last droplet to evaporate
 rand=0 # leave in most cases
+t_terminate=np.inf # forced termination time
 p_rate=0 # print rate in droplets/ second - 0 means all iniitalised at t=0.
