@@ -154,7 +154,7 @@ def load_MDTM_pickle(directory, prefix=None):
         prefix (Optional): specify a specific filename (no ext)."""
     #print("Trying with .pickle")
     if prefix==None:
-        prefix1 = "MDTM_*.pkl"
+        prefix1 = "Masoud_*.pkl"
     else:
         prefix1 = prefix + ".pkl"
     try:
@@ -165,7 +165,7 @@ def load_MDTM_pickle(directory, prefix=None):
     except:
         #print("Trying .pkl")   
         if prefix==None:
-            prefix = "MDTM*.pkl"
+            prefix = "Masoud*.pkl"
         else:
             prefix = prefix[:4]+ ".pkl"
         target = glob.glob(os.path.join(directory,prefix))[0]        
