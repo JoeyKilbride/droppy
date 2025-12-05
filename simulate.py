@@ -133,7 +133,7 @@ def Iterate(RunTimeInputs, plot=False):
                 theta = pm.GetCAfromV(Vi/1000, r0, ZERO)  
             elif (RunTimeInputs['mode'] == "CCA"):
                 r0 = pm.GetBase(theta, Vi/1000)
-            print("average r: ", np.mean(r0))
+            print(", average radius: ", np.mean(r0[alive]))
             Vprev       = deepcopy(Vi)
 
             if RunTimeInputs['model'] == "Masoud":
