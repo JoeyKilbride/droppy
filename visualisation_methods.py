@@ -86,7 +86,7 @@ def get_cmap(n, name='prism'):
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
     
-def ReportResults(Results, cmap_name, which_model):
+def ReportResults(filename, RunTimeInputs, cmap_name):
     """Plots graphics from the evaportion data."""
     plt.close('all')
     fig_V = plt.figure()
@@ -99,89 +99,79 @@ def ReportResults(Results, cmap_name, which_model):
     #fig_tevap = plt.figure()
     #ax_tevap = fig_tevap.add_subplot(1, 1, 1)
     
-    ND = Results["RunTimeInputs"]['DNum']
-    xc = np.mean(Results["RunTimeInputs"]["xcentres"])
-    yc = np.mean(Results["RunTimeInputs"]["ycentres"])
-
+    xc = np.mean(RunTimeInputs["xcentres"])
+    yc = np.mean(RunTimeInputs["ycentres"])
+    ND = len(RunTimeInputs["xcentres"])
+    
+    Results = iom.load_datasets_h5py(filename, ["Time", "Volume", "Theta", "Radius", "dVdt"])
+    print("volume:", Results['Volume'])
+    print("Time:", Results['Time'])
     t_evap = np.empty([ND])
     for pdx in range(ND):
         name = "D"+str(pdx)
         ax_V.plot(Results['Time']/np.max(Results['Time']), Results['Volume'][:,pdx]*1e6, label=name, marker="o")
         elem=list(np.nonzero(Results['Volume'][:,pdx]))[0][-1] # finds element where V is first zero.
         t_evap[pdx]=Results['Time'][elem]
-        #print("evap time ", t_evap[pdx])
-        dist_2_centre = np.sqrt((Results["RunTimeInputs"]["xcentres"][pdx]-xc)**2+(yc-Results["RunTimeInputs"]["ycentres"][pdx])**2)
-        #ax_tevap.scatter(dist_2_centre,t_evap[pdx])
-        #print("Inital Contact Angle: ", Results["RunTimeInputs"]["CA"][pdx])
-        #print("Inital CX: ", Results["RunTimeInputs"]["xcentres"][pdx])
-        #print(Results['Volume'][:,pdx]*1e6)
-        if Results['RunTimeInputs']['mode']=="CCR":
+        if RunTimeInputs['mode']=="CCR":
             ax_idx.plot(Results['Time']/np.max(Results['Time']), Results['Theta'][:,pdx], label=name, marker="o")
         else:
             ax_idx.plot(Results['Time']/np.max(Results['Time']), Results['Radius'][:,pdx], label=name, marker="o")
             
         ax_dVdt.plot(Results['Time']/np.max(Results['Time']), Results['dVdt'][:,pdx]*1e6, label=name)
-    #print("t_evap = ", t_evap)
-    #print("Mean calculation time: ",mean(Results['Calc_Time']))
-    #print("Total calculation time: ",sum(Results['Calc_Time']))
-    s_dt = ax_dt.scatter(Results['RunTimeInputs']['xcentres'],Results['RunTimeInputs']['ycentres'],\
-         c=pm.normalise(t_evap), cmap=cmap_name, vmin=0, vmax=1)
-    # ax_dt.set_aspect('equal', adjustable='box')
+        s_dt = ax_dt.scatter(RunTimeInputs['xcentres'],RunTimeInputs['ycentres'],\
+        c=pm.normalise(t_evap), cmap=cmap_name, vmin=0, vmax=1)
+    
     fig_dt.colorbar(s_dt, ax=ax_dt,  orientation='horizontal')
-    #print("Number of droplets: ",Results['RunTimeInputs']['DNum'])
+    
     ax_V.set_ylabel(r"$V (\mu L)$")
     ax_V.set_xlabel(r"$t/\tau_{max}$")
-    if Results['RunTimeInputs']['DNum']<15:
+    if RunTimeInputs['DNum']<15:
         ax_V.legend()
         ax_idx.legend()
         ax_dVdt.legend()
         
     ax_idx.set_xlabel(r"$t/\tau_{max}$")
-    if Results['RunTimeInputs']['mode']=="CCR":
+    if RunTimeInputs['mode']=="CCR":
         ax_idx.set_ylabel("\u03B8 (\u00b0)")
     else:
         ax_idx.set_ylabel(r"$a$ (mm)")
     ax_dVdt.set_xlabel(r"$t/\tau_{max}$")
     ax_dVdt.set_ylabel(r"$\frac{dV}{dt} (\mu$"+ r"$Ls^{-1})$")
 
-    fig_V.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_V.png"))
-    fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.png"))
-    fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.png"))
-    fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.png"))
-    #fig_V.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_V.svg"))
-    #fig_idx.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_CA.svg"))
-    #fig_dVdt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_dVdt.svg"))
-    #fig_dt.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_drytime_heatmap.svg"))
-    #fig_tevap.savefig(os.path.join(Results['RunTimeInputs']['Directory'],Results['RunTimeInputs']['Filename']+"_tevap.png"))
-    Results['t_evap'] = t_evap
-    iom.pickle_dict(Results['RunTimeInputs']['Directory'], which_model+"_"+Results['RunTimeInputs']['Filename'], Results)
+    fig_V.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_V.png"))
+    fig_idx.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_CA.png"))
+    fig_dVdt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_dVdt.png"))
+    fig_dt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_drytime_heatmap.png"))
+
+    iom.write_hdf5_directly(t_evap, 't_evap', filename)
     plt.show()
     return
 
-def export_video(DTM_data, odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
+def export_video(data_path, RunTimeInputs, odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
+    DTM_data = iom.load_datasets_h5py(data_path, ["t_evap", "t_print", "Theta", "Radius", "Time"])
     unique_drying_times = np.unique(DTM_data['t_evap'])
-    max_time = np.max(unique_drying_times)+DTM_data['RunTimeInputs']['dt']
+    max_time = np.max(unique_drying_times)+RunTimeInputs['dt']
 
     times = np.linspace(0,max_time,number_of_frames)
-    xs = DTM_data['RunTimeInputs']['xcentres']
-    ys = DTM_data['RunTimeInputs']['ycentres']
+    xs = RunTimeInputs['xcentres']
+    ys = RunTimeInputs['ycentres']
     width, height = int(12.80*odpi), int(10.40*odpi)
-    out = cv2.VideoWriter(os.path.join(DTM_data['RunTimeInputs']['Directory'], DTM_data['RunTimeInputs']['Filename']+"video.avi"), cv2.VideoWriter_fourcc(*'MJPG'), vid_FPS, (width,height))
+    out = cv2.VideoWriter(os.path.join(RunTimeInputs['Directory'], RunTimeInputs['Filename']+"video.avi"), cv2.VideoWriter_fourcc(*'MJPG'), vid_FPS, (width,height))
     current_backend = plt.get_backend()
     plt.switch_backend('Agg')
     # Create a figure (no need to show it)
     fig, ax = plt.subplots(constrained_layout=True)  # match size
     printed = DTM_data["t_print"]==0
     centres=list(zip(list(xs[printed]*1e6),list(ys[printed]*1e6)))
-    vmax = [0,np.max(DTM_data["RunTimeInputs"]["CA"])*180/np.pi]
+    vmax = [0,np.max(RunTimeInputs["CA"])*180/np.pi]
     all_centres=list(zip(list(xs*1e6),list(ys*1e6)))
     cs=list(zip(*all_centres))
-    mr=max(DTM_data['RunTimeInputs']['Rb'])*1e6
+    mr=max(RunTimeInputs['Rb'])*1e6
    
     lims= np.array([[min(cs[0])-mr,max(cs[0])+mr],[min(cs[1])-mr,max(cs[1])+mr]])
 
     cmap1, normcmap1, collection1=CreateDroplets(ax, fig, cmap_name, centres, 
-                                                    DTM_data['RunTimeInputs']['Rb'][printed]*1e6, DTM_data["RunTimeInputs"]["CA"][printed]*180/np.pi, vmax[0], vmax[1], True, True, lims=lims)
+                                                    RunTimeInputs['Rb'][printed]*1e6, RunTimeInputs["CA"][printed]*180/np.pi, vmax[0], vmax[1], True, True, lims=lims)
     
     ax.set_aspect('equal', adjustable='box')
     
@@ -193,8 +183,8 @@ def export_video(DTM_data, odpi=200, vid_FPS=25, number_of_frames=10, cmap_name=
         t_i = np.argmin(abs(DTM_data['Time']-t))
         printed = DTM_data["t_print"]<=t_i
         centres=list(zip(list(xs[printed]*1e6),list(ys[printed]*1e6)))
-        if DTM_data['RunTimeInputs']['mode']=="CCR":
-            r0=DTM_data['RunTimeInputs']['Rb'][printed]
+        if RunTimeInputs['mode']=="CCR":
+            r0=RunTimeInputs['Rb'][printed]
             theta = DTM_data["Theta"][t_i,:][printed]
             UpdateDroplets(ax, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
             title.set_text(f"t = {t:.2f} (s)")
@@ -202,7 +192,7 @@ def export_video(DTM_data, odpi=200, vid_FPS=25, number_of_frames=10, cmap_name=
         else:
             ax.clear()
             r0 = DTM_data["Radius"][t_i,:][printed]
-            CreateDroplets(ax, fig, cmap_name, centres, r0*1e6, DTM_data["RunTimeInputs"]["CA"][printed]*180/np.pi, vmax[0], vmax[1], True, False, lims=lims)
+            CreateDroplets(ax, fig, cmap_name, centres, r0*1e6, RunTimeInputs["CA"][printed]*180/np.pi, vmax[0], vmax[1], True, False, lims=lims)
             ax.set_aspect('equal', adjustable='box')
             title.set_text(f"t = {t:.2f}")
     

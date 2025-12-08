@@ -9,20 +9,25 @@ import io_methods as iom
 import visualisation_methods as vm
 import timeit
 import time
+import h5py
 matplotlib_axes_logger.setLevel('ERROR')
 
 
 
-def Iterate(RunTimeInputs, plot=False):
+
+
+
+def Iterate(RunTimeInputs, output_target, plot=False):
     """main function."""
     os.environ["OPENBLAS_NUM_THREADS"] = "4"
 
     print("_____________________________________________")
     print("Starting Parameters:")
     print("_____________________________________________")
-      
 
     
+    buffer_size = 10 # make this configurable later
+
     # Ready the troops
     xcentres = RunTimeInputs['xcentres']
     ycentres = RunTimeInputs['ycentres']
@@ -35,6 +40,7 @@ def Iterate(RunTimeInputs, plot=False):
     gone        = np.ones(RunTimeInputs['DNum'])==1
     alive       = np.ones(RunTimeInputs['DNum'])==1
     V           = np.ones(RunTimeInputs['DNum'])
+        
     V_t         = np.empty((0,RunTimeInputs['DNum']), float)
     r0_t        = np.empty((0,RunTimeInputs['DNum']), float)
     dVdt_t      = np.empty((0,RunTimeInputs['DNum']), float)
@@ -42,6 +48,9 @@ def Iterate(RunTimeInputs, plot=False):
     RH_t        = np.empty((0,1), float)
     theta_t     = np.empty((0,RunTimeInputs['DNum']), float)
     dVdt        = np.zeros(RunTimeInputs['DNum'], float)
+    
+    
+    
     transient_length = RunTimeInputs['Transient_Length'] 
     gone_record = gone
 
@@ -104,6 +113,7 @@ def Iterate(RunTimeInputs, plot=False):
     dVdt_transient=np.zeros(RunTimeInputs['DNum'])
 
     if ((RunTimeInputs['bias_point'] is None) or (RunTimeInputs['bias_grad'] is None)):
+        no_bias=True
         b_ang=None
         mb = 0
         bias = np.ones(len(xcentres))
@@ -113,7 +123,63 @@ def Iterate(RunTimeInputs, plot=False):
     if RunTimeInputs['model'] == "Wray":
          dVdt_new=pm.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])
     
+    ############################################
+    with h5py.File(output_target+".h5", "w") as f:
+        dset1 = f.create_dataset(
+            "Time",
+            shape=(0,1),             # another dataset
+            maxshape=(None,1),
+            dtype="float64",
+            chunks=(buffer_size,1),
+            compression="gzip"
+        )
+        
+        dset2 = f.create_dataset(
+            "Volume",
+            shape=(0,len(xcentres)),             # another dataset
+            maxshape=(None,len(xcentres)),
+            dtype="float64",
+            chunks=(buffer_size,len(xcentres)),
+            compression="gzip"
+        )
 
+        dset3 = f.create_dataset(
+            "dVdt",
+            shape=(0,len(xcentres)),             # another dataset
+            maxshape=(None,len(xcentres)),
+            dtype="float64",
+            chunks=(buffer_size,len(xcentres)),
+            compression="gzip"
+        )
+
+        if RunTimeInputs['box_volume']!=np.inf:
+            dset5 = f.create_dataset(
+                "Ambient_RHs",
+                shape=(0,1),             # another dataset
+                maxshape=(None,1),
+                dtype="float64",
+                chunks=(buffer_size,1),
+                compression="gzip"
+            )
+
+        dset6 = f.create_dataset(
+            "Theta",
+            shape=(0,len(xcentres)),             # another dataset
+            maxshape=(None,len(xcentres)),
+            dtype="float64",
+            chunks=(buffer_size,len(xcentres)),
+            compression="gzip"
+        )
+        dset6 = f.create_dataset(
+            "Radius",
+            shape=(0,len(xcentres)),             # another dataset
+            maxshape=(None,len(xcentres)),
+            dtype="float64",
+            chunks=(buffer_size,len(xcentres)),
+            compression="gzip"
+        )
+
+    ############################################
 
     while len(V[alive])>0: 
         print("___________________Remaining Evaporating____________________")
@@ -184,6 +250,7 @@ def Iterate(RunTimeInputs, plot=False):
         
             t_i     = np.vstack([t_i, t]) # record time steps
             V_t     = np.vstack([V_t, Vi]) # add new volumes to array
+            print(np.shape(V_t))
             r0_t    = np.vstack([r0_t, r0])
             theta_t = np.vstack([theta_t, theta*180/np.pi])
             
@@ -204,10 +271,29 @@ def Iterate(RunTimeInputs, plot=False):
                                                 RunTimeInputs['Ambient_T'] +273.15, 
                                                 RunTimeInputs['rho_liquid'], 
                                                 np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
+            
+            print("len ti: ",len(t_i))
+            if len(t_i) == buffer_size:
+                print("writing data - buffer full")
+                with h5py.File(output_target+".h5", "a") as f:
+                    iom.stream_hdf5_collection(f, t_i,"Time")
+                    iom.stream_hdf5_collection(f, V_t,"Volume")
+                    dVdt_t = iom.stream_hdf5_collection(f, dVdt_t,"dVdt")
+                    if RunTimeInputs['box_volume']!=np.inf:
+                        iom.stream_hdf5_collection(f, RH_t,"Ambient_RHs")
+                        RH_t        = np.empty((0,1), float)
+                    iom.stream_hdf5_collection(f, theta_t,"Theta")
+                    iom.stream_hdf5_collection(f, r0_t,"Radius")
 
-            else:
-                RH = RunTimeInputs['Ambient_RHs'][0]
-       
+
+                V_t         = np.empty((0,RunTimeInputs['DNum']), float)
+                r0_t        = np.empty((0,RunTimeInputs['DNum']), float)
+                dVdt_t      = np.empty((0,RunTimeInputs['DNum']), float)
+                t_i         = np.empty((0,1), float)
+                theta_t     = np.empty((0,RunTimeInputs['DNum']), float)
+                dVdt        = np.zeros(RunTimeInputs['DNum'], float)
+
+                    
             if RunTimeInputs['mode']=="CCR":
                 if plot:
                     vm.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
@@ -258,8 +344,12 @@ def Iterate(RunTimeInputs, plot=False):
     loop_end=timeit.default_timer()
     tloop=(loop_end-loop_start)/60 # mins
     print(f"Loop ran for: {tloop:2f} mins")
+
+
+    # Save end values
     V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
     t_i = np.vstack([t_i, t]) # add final times to array
+    
     if (RunTimeInputs['mode'] == "CCR"):
         theta = pm.GetCAfromV(Vi/1000, r0, ZERO) 
         theta_t= np.vstack([theta_t, theta*180/np.pi])
@@ -279,31 +369,41 @@ def Iterate(RunTimeInputs, plot=False):
             plt.pause(0.001)
 
     dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
+    with h5py.File(output_target+".h5", "a") as f:
+        t_i=iom.stream_hdf5_collection(f, t_i,"Time")
+        V_t=iom.stream_hdf5_collection(f, V_t,"Volume")
+        dVdt_t = iom.stream_hdf5_collection(f, dVdt_t,"dVdt")
+        if RunTimeInputs['box_volume']!=np.inf:
+            RH_t = iom.stream_hdf5_collection(f, RH_t,"Ambient_RHs")
+        theta_t = iom.stream_hdf5_collection(f, theta_t,"Theta")
+        r0_t = iom.stream_hdf5_collection(f, r0_t,"Radius")
+
+    iom.write_hdf5_directly(t_print, 't_print', output_target)
     print("_____________________________________________")
     print("Residual Volume error = ", residual)
     print(f"Droplets took ,{t/60:.2f} mins to evaporate")
     print("_____________________________________________")
-    print(type(V_t))
-    MasoudResults={}
-    MasoudResults["Time"]=t_i
-    MasoudResults["Volume"]=V_t
-    MasoudResults["dVdt"]=dVdt_t
-    MasoudResults["bias_grad"]=mb
-    MasoudResults["bias_angle"]=b_ang
-    MasoudResults['t_print']=t_print
-    if RunTimeInputs['box_volume']!=np.inf:
-        MasoudResults["Ambient_RHs"]=RH_t
-    else:
-        MasoudResults["Ambient_RHs"]=RunTimeInputs["Ambient_RHs"][0]
-    if (RunTimeInputs['mode'] == "CCR"):
-        MasoudResults["Theta"] = theta_t
-    elif (RunTimeInputs['mode'] == "CCA"):
-        MasoudResults['Radius'] = r0_t
     
-    MasoudResults["RunTimeInputs"]=RunTimeInputs
+    # print(type(V_t))
+    # Results={}
+    # Results["Time"]=t_i
+    # Results["Volume"]=V_t
+    # Results["dVdt"]=dVdt_t
+    # if not(no_bias):
+    #     Results["bias_grad"]=mb
+    #     Results["bias_angle"]=b_ang
+    # Results['t_print']=t_print
+    # if RunTimeInputs['box_volume']!=np.inf:
+    #     Results["Ambient_RHs"]=RH_t
+    # if (RunTimeInputs['mode'] == "CCR"):
+    #     Results["Theta"] = theta_t
+    # elif (RunTimeInputs['mode'] == "CCA"):
+    #     Results['Radius'] = r0_t
+    
+    # Results["RunTimeInputs"]=RunTimeInputs
     #WrayResults["Calc_Time"]=Calc_Time
 
-    return MasoudResults
+    return RunTimeInputs
 ################################################################################################################
 ################################################################################################################
 ################################################################################################################

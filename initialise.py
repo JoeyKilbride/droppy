@@ -71,14 +71,17 @@ for i in range(1):
     RunTimeInputs, saving, live_plot, compare, cmap_name, set_dpi ,set_FPS,export_nframes = create_initial_conditions(i,directory)
     
     tic = time.perf_counter()
-    Results = mod.Iterate(RunTimeInputs, live_plot)
+     
+    out_name = RunTimeInputs['model']+RunTimeInputs['Filename']
+    out_target  = os.path.join(directory,out_name)
+    RunTimeInputs = mod.Iterate(RunTimeInputs, out_target, live_plot)
     toc = time.perf_counter()
-    Results['simulation_time']=toc-tic    
+    # Results['simulation_time']=toc-tic    
 
     if saving:
-        vm.ReportResults(Results, cmap_name, RunTimeInputs['model'])
+        vm.ReportResults(out_target, RunTimeInputs, cmap_name)
         name = os.path.join(directory,'video')
-        vm.export_video(Results, number_of_frames=export_nframes, odpi=set_dpi, vid_FPS = set_FPS, cmap_name='jet')
+        vm.export_video(out_target, RunTimeInputs, number_of_frames=export_nframes, odpi=set_dpi, vid_FPS = set_FPS, cmap_name='jet')
     if compare:
         eResults = iom.load_MDL_pickle(RunTimeInputs['Directory'])
         if 'sort' in list(RunTimeInputs.keys()):
@@ -87,9 +90,9 @@ for i in range(1):
             eResults['drying_times'] = eResults['drying_times'][RunTimeInputs['sort']]
             eResults['rdx'] = eResults['rdx'][RunTimeInputs['sort']]
 
-        vm.Compare2Data(Results, eResults, cmap_name)
-        print("bias angle  = ",Results['bias_angle'])
-        print("bias gradient  = ",Results['bias_grad'])
+        vm.Compare2Data(eResults, cmap_name) # fix for new data handling
+        # print("bias angle  = ",Results['bias_angle'])
+        # print("bias gradient  = ",Results['bias_grad'])
         
     
 # =============================================================================

@@ -149,6 +149,55 @@ def load_MDL_pickle(directory, prefix=None):
 
     return input_dict
 
+def stream_hdf5_collection(f, buffer, buffer_name):
+    dset = f[buffer_name]   # access existing dataset
+    if buffer.size > 0:
+    # array is non-empty
+        arr = np.array(buffer)
+        dset.resize(dset.shape[0] + arr.shape[0], axis=0)
+        dset[-arr.shape[0]:] = arr#[:, 0]   # shape (10,)
+        
+    return
+
+def write_hdf5_directly(data, dataset_name, filename):
+    with h5py.File(filename+".h5", "a") as f:
+        f.create_dataset(
+            dataset_name,            # new dataset name
+            data=data,            # write directly from NumPy array
+            dtype="float64",      # optional, inferred from array
+            compression="gzip"    # optional compression
+        )
+    return 
+
+
+
+import h5py
+
+def load_datasets_h5py(file, dataset_names):
+    """
+    Load multiple datasets from an HDF5 file into a dict.
+
+    Parameters
+    ----------
+    file : str
+        Path to the HDF5 file.
+    dataset_names : list of str
+        Names of datasets to load.
+
+    Returns
+    -------
+    dict
+        Keys are dataset names, values are NumPy arrays with the dataset contents.
+    """
+    data = {}
+    with h5py.File(file+".h5", "r") as f:
+        for name in dataset_names:
+            if name in f:
+                data[name] = f[name][:]   # load full dataset into memory
+            else:
+                raise KeyError(f"Dataset '{name}' not found in file")
+    return data
+
 
 def pickle_dict(export_directory, export_name, pickle_file):
     """
