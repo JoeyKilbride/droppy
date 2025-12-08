@@ -149,40 +149,64 @@ def load_MDL_pickle(directory, prefix=None):
 
     return input_dict
 
-def load_MDTM_pickle(directory, prefix=None):
-    """Load a droplet theory prediction pickle.
-        prefix (Optional): specify a specific filename (no ext)."""
-    #print("Trying with .pickle")
-    if prefix==None:
-        prefix1 = "Masoud_*.pkl"
-    else:
-        prefix1 = prefix + ".pkl"
-    try:
-        target = glob.glob(os.path.join(directory,prefix1))[0]
-        if os.path.getsize(target)>0:
-            with open(target, 'rb') as handle:
-                input_dict = pickle.load(handle)
-    except:
-        #print("Trying .pkl")   
-        if prefix==None:
-            prefix = "Masoud*.pkl"
-        else:
-            prefix = prefix[:4]+ ".pkl"
-        target = glob.glob(os.path.join(directory,prefix))[0]        
-        if os.path.getsize(target)>0:
-            with open(target, 'rb') as handle:
-                input_dict = pickle.load(handle)
-
-    return input_dict
-
 
 def pickle_dict(export_directory, export_name, pickle_file):
-    Resultsfile = open(os.path.join(export_directory, export_name+'.pkl'), 'wb')
-    pickle.dump(pickle_file, Resultsfile)
-    Resultsfile.close()
-    return 
+    """
+    Save a dictionary sequentially: each key/value dumped one by one.
+    """
+    filepath = os.path.join(export_directory, export_name + '.pkl')
+    with open(filepath, 'wb') as f:
+        for key, value in pickle_file.items():
+            pickle.dump((key, value), f, protocol=pickle.HIGHEST_PROTOCOL)
+    return filepath
 
+def load_MDTM_pickle(directory, prefix=None):
+    """
+    Load a dictionary sequentially: reconstruct key/value pairs one by one.
+    """
+    if prefix is None:
+        pattern = "Masoud_*.pkl"
+    else:
+        pattern = prefix + ".pkl"
 
+    targets = glob.glob(os.path.join(directory, pattern))
+    if not targets:
+        raise FileNotFoundError(f"No pickle files found with pattern {pattern}")
+
+    target = targets[0]
+    result = {}
+    with open(target, 'rb') as f:
+        try:
+            while True:
+                key, value = pickle.load(f)
+                result[key] = value
+        except EOFError:
+            pass
+    return result
+
+def load_MDTM_pickle_unsequential(directory, prefix=None): 
+    """Load a droplet theory prediction pickle. prefix (Optional): specify a specific filename (no ext).""" 
+    #print("Trying with .pickle") 
+    if prefix==None: 
+        prefix1 = "Masoud_*.pkl" 
+    
+    else: 
+        prefix1 = prefix + ".pkl" 
+    try: 
+        target = glob.glob(os.path.join(directory,prefix1))[0]
+        if os.path.getsize(target)>0: 
+            with open(target, 'rb') as handle: 
+                input_dict = pickle.load(handle) 
+    except: 
+        if prefix==None: 
+            prefix = "Masoud*.pkl" 
+        else: prefix = prefix[:4]+ ".pkl" 
+        
+        target = glob.glob(os.path.join(directory,prefix))[0] 
+        if os.path.getsize(target)>0: 
+            with open(target, 'rb') as handle: 
+                input_dict = pickle.load(handle) 
+    return input_dict
 
 
 def read_imageJ_coords(directory, filename):
