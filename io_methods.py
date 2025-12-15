@@ -3,8 +3,8 @@
 This file contains input/output functions used for file handling by the code. 
 
 """
-
 from __future__ import division
+import h5py
 import numpy as np
 from PIL import ImageColor
 import os
@@ -171,7 +171,7 @@ def write_hdf5_directly(data, dataset_name, filename):
 
 
 
-import h5py
+
 
 def load_datasets_h5py(file, dataset_names):
     """
