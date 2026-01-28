@@ -309,7 +309,7 @@ def GetCAfromV(V, Rb, zero):
         cnum=len(p[0,:])
         CA=np.empty([cnum])
         for i in range(cnum):
-            if any(p[:,i]==np.Inf*np.ones(4)): 
+            if any(p[:,i]==np.inf*np.ones(4)): 
                 CA[i]=0
             else:
                 rts=np.roots(p[:,i])

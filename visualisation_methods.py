@@ -142,7 +142,7 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     fig_idx.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_CA.png"))
     fig_dVdt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_dVdt.png"))
     fig_dt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_drytime_heatmap.png"))
-
+    print("writing tevap:")
     iom.write_hdf5_directly(t_evap, 't_evap', filename)
     plt.show()
     return

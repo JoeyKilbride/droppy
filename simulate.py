@@ -13,10 +13,6 @@ import h5py
 matplotlib_axes_logger.setLevel('ERROR')
 
 
-
-
-
-
 def Iterate(RunTimeInputs, output_target, plot=False):
     """main function."""
     os.environ["OPENBLAS_NUM_THREADS"] = "4"
@@ -33,7 +29,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     ycentres = RunTimeInputs['ycentres']
     r0       = RunTimeInputs['Rb']
     theta    = RunTimeInputs['CA']
-    t        = RunTimeInputs['t']
+    t        = 0
     Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
     RH       = RunTimeInputs['Ambient_RHs'][0]
@@ -272,7 +268,6 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                                                 RunTimeInputs['rho_liquid'], 
                                                 np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
             
-            print("len ti: ",len(t_i))
             if len(t_i) == buffer_size:
                 print("writing data - buffer full")
                 with h5py.File(output_target+".h5", "a") as f:

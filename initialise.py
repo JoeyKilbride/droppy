@@ -14,12 +14,15 @@ import numpy as np
 import simulate as mod
 import os
 import time
+import importlib
+import sys
 
 def create_initial_conditions(val, directory):
     """Function for writing dictionary initial conditions for Wray or Masoud 
     scripts."""
     print("input directory: ",directory)
-    c = iom.read_config(os.path.join(directory), "DTM_config")
+    c = iom.read_config(directory, 'DTM_config')
+    
     if c.filter_touching == True:
         c.CX, c.CY, c.Rb, c.CA = pm.TouchingCircles(c.CX,c.CY,c.Rb,c.CA)
 
@@ -74,6 +77,7 @@ for i in range(1):
      
     out_name = RunTimeInputs['model']+RunTimeInputs['Filename']
     out_target  = os.path.join(directory,out_name)
+    iom.pickle_dict(directory, out_name+"_IC", RunTimeInputs) # save initialisation data for continued simulations
     RunTimeInputs = mod.Iterate(RunTimeInputs, out_target, live_plot)
     toc = time.perf_counter()
     # Results['simulation_time']=toc-tic    

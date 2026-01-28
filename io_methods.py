@@ -173,7 +173,7 @@ def write_hdf5_directly(data, dataset_name, filename):
 
 
 
-def load_datasets_h5py(file, dataset_names):
+def load_datasets_h5py(file, dataset_names, resolution=1):
     """
     Load multiple datasets from an HDF5 file into a dict.
 
@@ -190,10 +190,16 @@ def load_datasets_h5py(file, dataset_names):
         Keys are dataset names, values are NumPy arrays with the dataset contents.
     """
     data = {}
+    print("file: ",file)
+    if resolution>1:
+        res_var = slice(None, None, resolution)
+    else:
+        res_var = slice(None)
+
     with h5py.File(file+".h5", "r") as f:
         for name in dataset_names:
             if name in f:
-                data[name] = f[name][:]   # load full dataset into memory
+                data[name] = f[name][res_var]   # load full dataset into memory
             else:
                 raise KeyError(f"Dataset '{name}' not found in file")
     return data
@@ -204,10 +210,18 @@ def pickle_dict(export_directory, export_name, pickle_file):
     Save a dictionary sequentially: each key/value dumped one by one.
     """
     filepath = os.path.join(export_directory, export_name + '.pkl')
-    with open(filepath, 'wb') as f:
-        for key, value in pickle_file.items():
-            pickle.dump((key, value), f, protocol=pickle.HIGHEST_PROTOCOL)
-    return filepath
+
+    with open(filepath, "wb") as f:
+        pickle.dump(pickle_file, f, protocol=pickle.HIGHEST_PROTOCOL)
+    return
+
+def load_dict(directory):
+    print(directory+".pkl")
+    targets = glob.glob(directory+".pkl")[0]
+    print("target: ", targets)
+    with open(targets, "rb") as f:
+        my_dict = pickle.load(f)
+    return my_dict    
 
 def load_MDTM_pickle(directory, prefix=None):
     """
