@@ -36,7 +36,7 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['DNum']=len(c.CX)            # total number of droplets in array
     RunTimeInputs['Ambient_RHs']=c.Ambient_RHs # Fraction [0-1]
     RunTimeInputs['Ambient_T']=c.Ambient_T     # Degrees C
-    RunTimeInputs['t']=c.t                     # initial time (s)
+    RunTimeInputs['t']=0                     # initial time (s)
     RunTimeInputs['model']=c.model             # which model to simulate with "Wray" or "Masoud"
     RunTimeInputs['Directory']=directory       # where to save data (absolute, no trailing \)
     RunTimeInputs['Filename']=filename         # what to call data (no exts)

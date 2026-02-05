@@ -27,42 +27,64 @@ def get_radial_position(X, Y, xref, yref):
     radial = np.sqrt(((X-xref)**2+(Y-yref)**2))
     return radial 
 
-def TouchingCircles(cx,cy,r, ca):
+def TouchingCircles(cx,cy,r,ca):
     """filters touching circles from polydisperse array.
     Returns boolean mask of touching circles to filter original arrays."""
-    print("Raw droplets: ", len(cx))
-    touching=np.ones([len(cx)],dtype=bool) 
-    for idx, i in enumerate(cx): 
-        print(idx)
-        for jdx, j in enumerate(cx):
-        
-            if touching[idx]==0:
+    N = len(cx)
+    any_touching = False
+    touching={}
+    for idx in range(N): 
+        touching[idx]=[]
+        if ca[idx]>np.pi/2:
+            r_idx = r[idx]/np.sin(ca[idx]) # if hydrophobic, midpoints will touch first
+            # technically speaking this is an assumption as two droplets with very different 
+            # ca might still not touch when r_idx + r_jdx > the centre 2 centre separation. 
+            # This is a small effect and a unqiue situation and is therefore ignored!
+        else:
+            r_idx = r[idx]
+            
+        for jdx in range(N):
+            if jdx == idx:
+                continue
+            if ca[jdx]>np.pi/2:
+                r_jdx = r[jdx]/np.sin(ca[jdx]) # if hydrophobic, midpoints will touch first
+            else:
+                r_jdx = r[jdx]
+              
+            if ((cx[idx]-cx[jdx])**2+(cy[idx]-cy[jdx])**2) > (r_idx+r_jdx)**2:
+                # Not touching
                 continue
             else:
-                s=np.sqrt((i-j)**2+(cy[idx]-cy[jdx])**2)
-                if s==0:
-                    #print("same droplet")
-                    #print("idx: "+str(idx)+" jdx: ", str(jdx))
-                    continue
-                elif s<(r[idx]+r[jdx]):
-                    print("idx: "+str(idx)+" jdx: ", str(jdx))
-                    if r[idx]>r[jdx]:
-                        touching[jdx]=0
-                        #print("Removing jdx: "+ str(jdx))
-                        #print("removed: ",count_nonzero(touching))
-                    else:
-                        touching[idx]=0
-                        #print("Removing idx: "+str(idx))
-                        #print("removed: ",count_nonzero(touching))
-                        continue
-                else:
-                    touching[idx]=1
-    print("filtered droplets: ", len(cx[touching]))
-    CX=cx[touching]
-    CY=cy[touching]
-    Rb=r[touching]
-    CA=ca[touching]  
-    return CX, CY, Rb, CA
+                any_touching =True
+                # Touching
+                touching[idx]=touching[idx]+[jdx]
+
+    return touching, any_touching
+
+def find_chains(touching):
+    n_chain=1
+    N = len(touching)
+    connected= np.zeros(N)
+    droplets = np.arange(N)
+    for d in droplets:
+        chain = touching[d]
+        if chain != []:
+            for c in chain:
+                chain = chain + touching[c] # add newly connect droplets in the chain
+            connected[chain]=n_chain # label all connected droplet with a chain number
+            n_chain = n_chain + 1 # update chain number
+            droplets = droplets[~np.isin(droplets, chain)] # remove all found droplets
+        else:
+            connected[d]=[0]
+        return connected
+
+def mass_centre(x,y,ms):
+    
+    M  = np.sum(ms)
+    x_CM = np.sum(x*ms)/M
+    y_CM = np.sum(y*ms)/M
+    return x_CM, y_CM, M
+
 
 def circular_sort(X, Y):
     """Function sorting x,y points into circles from centre to edge."""

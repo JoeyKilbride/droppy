@@ -149,8 +149,29 @@ def load_MDL_pickle(directory, prefix=None):
 
     return input_dict
 
-def stream_hdf5_collection(f, buffer, buffer_name):
-    dset = f[buffer_name]   # access existing dataset
+def stream_hdf5_collection(f, buffer, buffer_name, group=None):
+    # Choose where to look for the dataset
+    if group is None:
+        container = f
+    else:
+        print("group:",group)
+        container = f.require_group(group)
+
+    if buffer_name in container:
+        dset = container[buffer_name]
+    else:
+        N = buffer.shape[1]
+        dset = container.create_dataset(
+            buffer_name,
+            shape=(0,N),             # another dataset
+            maxshape=(None,N),
+            dtype="float64",
+            chunks=(10,N), 
+            compression="gzip"
+        )
+
+    # Access the dataset inside the chosen container
+    dset = container[buffer_name]
     if buffer.size > 0:
     # array is non-empty
         arr = np.array(buffer)
@@ -158,6 +179,7 @@ def stream_hdf5_collection(f, buffer, buffer_name):
         dset[-arr.shape[0]:] = arr#[:, 0]   # shape (10,)
         
     return
+
 
 def write_hdf5_directly(data, dataset_name, filename):
     with h5py.File(filename+".h5", "a") as f:
