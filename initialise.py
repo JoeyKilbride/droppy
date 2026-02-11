@@ -78,14 +78,14 @@ for i in range(1):
     out_name = RunTimeInputs['model']+RunTimeInputs['Filename']
     out_target  = os.path.join(directory,out_name)
     iom.pickle_dict(directory, out_name+"_IC", RunTimeInputs) # save initialisation data for continued simulations
-    RunTimeInputs = mod.Iterate(RunTimeInputs, out_target, live_plot)
+    RunTimeInputs, xc, yc , rec_p = mod.Iterate(RunTimeInputs, out_target, live_plot)
     toc = time.perf_counter()
     # Results['simulation_time']=toc-tic    
 
     if saving:
         vm.ReportResults(out_target, RunTimeInputs, cmap_name)
         name = os.path.join(directory,'video')
-        vm.export_video(out_target, RunTimeInputs, number_of_frames=export_nframes, odpi=set_dpi, vid_FPS = set_FPS, cmap_name='jet')
+        vm.export_video(out_target, RunTimeInputs, xc,yc, rec_p, number_of_frames=export_nframes, odpi=set_dpi, vid_FPS = set_FPS, cmap_name='jet')
     if compare:
         eResults = iom.load_MDL_pickle(RunTimeInputs['Directory'])
         if 'sort' in list(RunTimeInputs.keys()):

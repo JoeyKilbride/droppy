@@ -61,8 +61,9 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         t_print = np.linspace(0,RunTimeInputs['DNum']/RunTimeInputs['p_rate'],RunTimeInputs['DNum'])
 
     has_V = Vi>0
-    printed = t_print==t # should be 1 droplet
-
+    print_record={}
+    printed = t_print==t # should be at least 1 droplet
+    print_record[0]=printed
     alive = np.logical_and(printed, has_V)
 
     alive_prev  = deepcopy(alive)
@@ -126,10 +127,10 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     
     ############################################
     segment_index = 0
-    volume_segment = f"Volume_{segment_index:04d}"
-    dVdt_segment = f"dVdt_{segment_index:04d}"
-    radius_segment = f"radius_{segment_index:04d}"
-    theta_segment = f"theta_{segment_index:04d}"
+    volume_segment = f"segment_{segment_index:04d}"
+    dVdt_segment = f"segment_{segment_index:04d}"
+    radius_segment = f"segment_{segment_index:04d}"
+    theta_segment = f"segment_{segment_index:04d}"
     with h5py.File(output_target+".h5", "w") as f:
         dset1 = f.create_dataset(
             "Time",
@@ -139,7 +140,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             chunks=(buffer_size,1),
             compression="gzip"
         )
-        Vgrp = f.require_group("volume_segments")
+        Vgrp = f.require_group("Volumes")
         dset2 = Vgrp.create_dataset(
             volume_segment,
             shape=(0,N),             # another dataset
@@ -148,7 +149,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             chunks=(buffer_size,N),
             compression="gzip"
         )
-        dVdtgrp = f.require_group("dvdt_segments")
+        dVdtgrp = f.require_group("dVdt")
         dset3 = dVdtgrp.create_dataset(
             dVdt_segment,
             shape=(0,N),             # another dataset
@@ -167,8 +168,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 chunks=(buffer_size,1),
                 compression="gzip"
             )
-        print("theta_seg:", theta_segment)
-        thetagrp = f.require_group("theta_segments")
+        
+        thetagrp = f.require_group("Theta")
         dset6 = thetagrp.create_dataset(
             theta_segment,
             shape=(0,N),             # another dataset
@@ -177,7 +178,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             chunks=(buffer_size,N),
             compression="gzip"
         )     
-        radiusgrp = f.require_group("radius_segments")
+        radiusgrp = f.require_group("Radius")
         dset6 = radiusgrp.create_dataset(
             radius_segment,
             shape=(0,N),             # another dataset
@@ -188,13 +189,15 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         )
 
     ############################################
-    
+    terminate=False
     while len(Vi[alive])>0: 
         print("___________________Remaining Evaporating____________________")
         any_evaporated = np.any(Vi[alive] <= ZERO)
         any_unprinted = len(t_print<=t)>len(printed)
         touching, any_touching = pm.TouchingCircles(xc[alive],yc[alive],r0[alive],theta[alive])
         keep_incrementing = not(any([any_evaporated, any_unprinted, any_touching]))
+        print("keep_incremnenting: ", keep_incrementing)
+        print(any_evaporated, any_unprinted, any_touching)
         while keep_incrementing:
             if t>RunTimeInputs['t_terminate']:
                 print("_________________")
@@ -285,14 +288,14 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 print("writing data - buffer full")
                 with h5py.File(output_target+".h5", "a") as f:
                     iom.stream_hdf5_collection(f, t_i, "Time")
-                    iom.stream_hdf5_collection(f, V_t, volume_segment, group="volume_segments")
-                    dVdt_t = iom.stream_hdf5_collection(f, dVdt_t, dVdt_segment, group="dvdt_segments")
+                    iom.stream_hdf5_collection(f, V_t, volume_segment, group="Volume")
+                    dVdt_t = iom.stream_hdf5_collection(f, dVdt_t, dVdt_segment, group="dVdt")
                     if RunTimeInputs['box_volume']!=np.inf:
                         iom.stream_hdf5_collection(f, RH_t,"Ambient_RHs")
                         RH_t        = np.empty((0,1), float)
      
-                    iom.stream_hdf5_collection(f, theta_t, theta_segment, group="theta_segments")
-                    iom.stream_hdf5_collection(f, r0_t, radius_segment, group="radius_segments")
+                    iom.stream_hdf5_collection(f, theta_t, theta_segment, group="Theta")
+                    iom.stream_hdf5_collection(f, r0_t, radius_segment, group="Radius")
 
 
                 V_t         = np.empty((0,N), float)
@@ -300,7 +303,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 dVdt_t      = np.empty((0,N), float)
                 t_i         = np.empty((0,1), float)
                 theta_t     = np.empty((0,N), float)
-                dVdt        = np.zeros(N, float)
+                
 
                     
             if RunTimeInputs['mode']=="CCR":
@@ -314,7 +317,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                     vm.CreateDroplets(ax1, fig, cmtype1, centres, r0, theta*180/np.pi, vmax1[0], vmax1[1], None,True)
                     vm.CreateDroplets(ax2, fig, cmtype2, centres, r0, dVdt, vmax2[0], vmax2[1], None, True)
                     plt.pause(0.001)
-            
+
+            dVdt        = np.zeros(N, float)
             print(f"| {t:2f} ",end="", flush=True)
            
             any_evaporated = np.any(Vi[alive] <= ZERO)
@@ -325,16 +329,21 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             keep_incrementing = not(any([any_evaporated, any_unprinted, any_touching]))
             
         if any_touching:
+            print("===================================")
+            print("===================================")
+            print("===================================")
+            print("===================================")
+            print("handling coelescence____________________")
             # save anything remaining in the buffer
             with h5py.File(output_target+".h5", "a") as f:
                 t_i=iom.stream_hdf5_collection(f, t_i,"Time")
-                V_t=iom.stream_hdf5_collection(f, V_t, volume_segment, group="volume_segments")
-                dVdt_t = iom.stream_hdf5_collection(f, dVdt_t, dVdt_segment, group="dvdt_segments")
+                V_t=iom.stream_hdf5_collection(f, V_t, volume_segment, group="Volume")
+                dVdt_t = iom.stream_hdf5_collection(f, dVdt_t, dVdt_segment, group="dVdt")
                 if RunTimeInputs['box_volume']!=np.inf:
                     RH_t = iom.stream_hdf5_collection(f, RH_t, "Ambient_RHs")
-                print("theta_seg: ", theta_segment)
-                theta_t = iom.stream_hdf5_collection(f, theta_t, theta_segment, group ="theta_segments")
-                r0_t = iom.stream_hdf5_collection(f, r0_t, radius_segment, group="radius_segments")
+                
+                theta_t = iom.stream_hdf5_collection(f, theta_t, theta_segment, group ="Theta")
+                r0_t = iom.stream_hdf5_collection(f, r0_t, radius_segment, group="Radius")
             
             # which droplets are touching 
             connected = pm.find_chains(touching)
@@ -358,13 +367,20 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             nmols = np.delete(nmols[alive], absorbed_indices)
             Vi_old = deepcopy(Vi)
             Vi = np.delete(Vi[alive],absorbed_indices)
-            for i in np.unique(connected)[1:]:
+            for idx, i in enumerate(np.unique(connected)[1:]):
                 args = np.argwhere(connected==i)
+                if len(first_idx[first_idx<=i])==0:
+                    ii=0
+                else:
+                    ii=max(first_idx[first_idx<=i]) # indices below current 
+                coaelescing = connected[:int(ii)]
+                values, counts = np.unique(coaelescing[coaelescing>0], return_counts=True)
+                index_map = np.sum(counts-1)
                 xc_i, yc_i, vc_i  = pm.mass_centre(xc_old[args],yc_old[args],Vi_old[alive][args])
-                nmols[args[0]] = np.sum(nmols_old[args]) # add mols in each droplet
-                xc[args[0]] = xc_i # new centres for the coelesced droplet
-                yc[args[0]] = yc_i
-                Vi[args[0]] = vc_i # new volume is total of the coelesced droplets
+                nmols[args[0]-index_map] = np.sum(nmols_old[args]) # add mols in each droplet
+                xc[args[0]-index_map] = xc_i # new centres for the coelesced droplet
+                yc[args[0]-index_map] = yc_i
+                Vi[args[0]-index_map] = vc_i # new volume is total of the coelesced droplets
             if (RunTimeInputs['mode'] == "CCR"):
                 theta = np.ones(len(Vi))*np.pi/4 # This is a bodge for future sorting out!!!
                                                  # as CCR is a bit unphysical in a coelescence context.
@@ -373,7 +389,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             elif (RunTimeInputs['mode'] == "CCA"):
                 theta = np.ones(len(Vi))*theta[0]
                 r0 = pm.GetBase(theta, Vi/1000)
-            
+            print("V updated:", Vi)
             # save the positions for the next segment (post coelescence)
             xcentres[t]=xc
             ycentres[t]=yc
@@ -392,20 +408,23 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             t_i         = np.empty((0,1), float)
             theta_t     = np.empty((0,N), float)
             dVdt        = np.zeros(N, float)
-            
+            t_print=np.delete(t_print,absorbed_indices)
+            print_record[t]=t_print<=t
+            print("===================================")
+            print("===================================")
+            print("===================================")
+            print("===================================")
+            print("===================================")
+
         # gone        = Vi<=ZERO
         alive_prev=deepcopy(alive) # Note that this is only used in transients, 
                                    # you can't have coelescence and transients at the same time.
 
-        t_print=np.delete(t_print,absorbed_indices)
         printed = t_print<=t
-        print("PRINTED:", printed)
         has_V   = Vi>ZERO
         alive   = np.logical_and(has_V,printed)
         
         # gone_record = np.vstack([gone_record, gone])
-        print(Vi)
-        print(dVdt)
         Vi   = np.where(Vi>ZERO,Vi,0) # sets negative values to zero volume
         dVdt = np.where(Vi>ZERO,dVdt,0)
 
@@ -446,13 +465,13 @@ def Iterate(RunTimeInputs, output_target, plot=False):
 
     dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
     with h5py.File(output_target+".h5", "a") as f:
-        t_i=iom.stream_hdf5_collection(f, t_i,"Time")
-        V_t=iom.stream_hdf5_collection(f, V_t,"Volume")
-        dVdt_t = iom.stream_hdf5_collection(f, dVdt_t,"dVdt")
+        iom.stream_hdf5_collection(f, t_i,"Time")
+        iom.stream_hdf5_collection(f, V_t, volume_segment, group="Volume")
+        iom.stream_hdf5_collection(f, dVdt_t, dVdt_segment, group="dVdt")
         if RunTimeInputs['box_volume']!=np.inf:
-            RH_t = iom.stream_hdf5_collection(f, RH_t,"Ambient_RHs")
-        theta_t = iom.stream_hdf5_collection(f, theta_t, theta_segment, group ="theta_segments")
-        r0_t = iom.stream_hdf5_collection(f, r0_t, radius_segment, group ="radius_segments")
+            iom.stream_hdf5_collection(f, RH_t,"Ambient_RHs")
+        iom.stream_hdf5_collection(f, theta_t, theta_segment, group ="Theta")
+        iom.stream_hdf5_collection(f, r0_t, radius_segment, group ="Radius")
 
     iom.write_hdf5_directly(t_print, 't_print', output_target)
     print("_____________________________________________")
@@ -460,206 +479,4 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     print(f"Droplets took ,{t/60:.2f} mins to evaporate")
     print("_____________________________________________")
     
-    # print(type(V_t))
-    # Results={}
-    # Results["Time"]=t_i
-    # Results["Volume"]=V_t
-    # Results["dVdt"]=dVdt_t
-    # if not(no_bias):
-    #     Results["bias_grad"]=mb
-    #     Results["bias_angle"]=b_ang
-    # Results['t_print']=t_print
-    # if RunTimeInputs['box_volume']!=np.inf:
-    #     Results["Ambient_RHs"]=RH_t
-    # if (RunTimeInputs['mode'] == "CCR"):
-    #     Results["Theta"] = theta_t
-    # elif (RunTimeInputs['mode'] == "CCA"):
-    #     Results['Radius'] = r0_t
-    
-    # Results["RunTimeInputs"]=RunTimeInputs
-    #WrayResults["Calc_Time"]=Calc_Time
-
-    return RunTimeInputs
-################################################################################################################
-################################################################################################################
-################################################################################################################
-################################################################################################################
-################################################################################################################
-################################################################################################################
-################################################################################################################
-################################################################################################################
-################################################################################################################
-
-def WrayEvaporate(RunTimeInputs):
-    """Runs Wray et al. Model iteratively based on input parameters."""
-
-    #plt.close('all')
-    print("_____________________________________________")
-    print("Starting Parameters:")
-    print("_____________________________________________")
-      
-    # Ready the troops
-    xcentres =RunTimeInputs['xcentres']
-    ycentres =RunTimeInputs['ycentres']
-    r0       =RunTimeInputs['Rb']
-    Vi       =RunTimeInputs['Vi']
-    t        =RunTimeInputs['t']
-
-    gone     = np.ones(RunTimeInputs['DNum'])==1
-    alive    = np.ones(RunTimeInputs['DNum'])==1
-    V        = np.ones(RunTimeInputs['DNum'])
-    V_t      = np.empty((0,RunTimeInputs['DNum']), float)
-    dVdt_t   = np.empty((0,RunTimeInputs['DNum']), float)
-    t_i      = np.empty((0,1), float)
-    theta_t  = np.empty((0,RunTimeInputs['DNum']), float)
-    dVdt     = np.zeros(RunTimeInputs['DNum'], float)
-    Calc_Time= np.empty(0,float)
-    transient_length = RunTimeInputs['Transient_Length'] 
-
-    gone_record=gone
-    step_counter=0
-    
-    ## Setup plotting 
-    #metadata = dict(title='Movie Test', artist='Matplotlib',
-    #            comment='Movie support!')
-    #writer   = FFMpegWriter(fps=30, metadata=metadata)
-    #colors   = iter(matplotlib.cm.rainbow(np.linspace(0, 1, RunTimeInputs['DNum'])))
-    
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    plt.title("Droplet Layout")
-    # ax1.set_aspect(1)
-    # ax2.set_aspect(1)
-    # # xmax=max(xcentres)+max(r0)
-    # xmin=min(xcentres)-max(r0)
-    # ymax=max(ycentres)+max(r0)      s
-    # ymin=min(ycentres)-max(r0)
-    # ax1.set_xlim(xmin, xmax)
-    # ax1.set_ylim(ymin, ymax)
-    # ax2.set_xlim(xmin, xmax)
-    # ax2.set_ylim(ymin, ymax)
-
-    centres=list(zip(list(xcentres),list(ycentres)))
-
-    dVdt_iso    = pm.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], r0, 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
-    cmap1, normcmap1, collection1=vm.CreateDroplets(ax1, fig, 'gnuplot2_r', centres,r0, RunTimeInputs['CA']*(180/np.pi),0,90, True)
-    cmap2, normcmap2, collection2=vm.CreateDroplets(ax2, fig, 'seismic_r', centres,r0, np.zeros(RunTimeInputs['DNum']),max(-dVdt_iso)*-100,max(-dVdt_iso)*100, True)
-
-
-
-    #cmap, normcmap, collection=CreateDroplets(ax, fig, 'gnuplot2_r', xcentres, ycentres,r0, RunTimeInputs['CA']*(180/pi))
-    # UpdateDroplets(ax, cmap, normcmap, collection, RunTimeInputs['CA']*(180/pi), RunTimeInputs['t'])
-    # plt.pause(0.1)
-    residual=0
-    ZERO=min(Vi)/1000 # IS THIS CORRECT???
-    print("\tNumber of droplets = ", RunTimeInputs['DNum'])
-    #print("\tInitial Base Radius (m) = ", r0)
-    #print("\tInitial Volume (\u03BC"+ "L)= ", Vi)
-    #print("\tInitial Contact Angle (\u00B0) = ", RunTimeInputs['CA']*(180/np.pi))
-    print("_____________________________________________")
-    dVdt_iso=pm.getIsolated(RunTimeInputs['Ambient_T'], RunTimeInputs['Ambient_RH'], RunTimeInputs['Rb'], 0, RunTimeInputs['rho_liquid']) # Using Hu & Larson 2002 eqn. 19
-    #with writer.saving(fig, os.path.join(RunTimeInputs['directory'],RunTimeInputs['filename']+".avi"), 100):
-    transient_times = np.zeros(RunTimeInputs['DNum'])
-    transient_droplets=np.zeros(RunTimeInputs['DNum'], dtype=bool) # none initially transient
-    #print("transient_droplets", transient_droplets)
-    dVdt_last =pm.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07) # Place holder for future declaration
-    while len(V[alive])>ZERO: # ?Can i make the Vi[alive] and remove the variable V?
-        
-        tic = time.perf_counter()
-        dVdt_new=pm.WrayFabricant(xcentres[alive], ycentres[alive], r0[alive], dVdt_iso[alive])# F0 in m/s (was 3.15e-07)
-        toc = time.perf_counter()
-        Calc_Time = np.append(Calc_Time,toc-tic)
-        dVdt[alive]=deepcopy(dVdt_new) # update new evaporation rates for living droplets
-        dVdt[transient_droplets] = deepcopy(dVdt_last[transient_droplets])
-        dVdt = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
-        del_t=Vi[alive]/-dVdt[alive]
-        fastest=np.where(del_t[del_t>0]==np.min(del_t[del_t>0]))
-        dt_fastest=del_t[del_t>0][fastest][0] # first element - all should be the same (coof_var should reveal if not)
-        coof_var=np.std(del_t[del_t>0][fastest])/np.mean(del_t[del_t>0][fastest])
-        print("Coefficient of variance (should be low) = ",coof_var)
-        
-        if np.any(transient_times<0):
-            dt_transient=np.min(-transient_times[alive][transient_droplets[alive]]) # time till next transient period ends
-            i_del_t = np.min([dt_transient,dt_fastest]) # step smallest time step
-            t_transient=True
-        else:
-            i_del_t = dt_fastest
-            t_transient=False
-        #print("time_step_selected: ",i_del_t)
-        while not(np.any(Vi[alive] <= ZERO)):
-            #print("Transient_Droplets", transient_droplets)
-            #dVdt[transient_droplets] = dVdt_last[transient_droplets]
-            t_i = np.vstack([t_i, t])
-            V_t=np.vstack([V_t, Vi])# add new volumes to array
-            #print("V[235]=",Vi[235])
-            theta=pm.GetCAfromV(Vi/1000, r0, ZERO)
-            theta_t=np.vstack([theta_t, theta*180/np.pi])
-            dVdt_t=np.vstack([dVdt_t, dVdt])# add new evap rates                
-            Vprev = deepcopy(Vi)
-            t=math.fsum([t,i_del_t]) # increment time
-            residual= residual+np.sum(Vi[np.where(Vi<ZERO)]) # sum overshoots
-            step_counter=step_counter+1 # 
-            print("Step ",str(step_counter)+", \u0394"+"t = (+",i_del_t,")s")
-
-            Vi = Vprev+(dVdt*i_del_t) # Reduce volume 
-            #print("Current Volume"+"(\u03BC"+ "L)=",Vi) 
-            #writer.grab_frame()
-            vm.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi, t)
-            vm.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt, t)
-            #writer.grab_frame()
-            #plt.pause(0.01)
-            
-            # delaying evaporation rate change
-            #transient_times[alive]=math.fsum([transient_times[alive],i_del_t])
-        
-            transient_times[transient_droplets]=np.array([math.fsum([x,i_del_t]) for x in transient_times[transient_droplets]])
-            transient_droplets = transient_times<0 # update transient droplets
-            #print("updated transient times: ",transient_times)
-            break
-        
-            
-
-            
-                
-        print("_____________________________________________")
-        print("Timestep Complete ...")
-        gone  = Vi<ZERO
-        alive = Vi>=ZERO
-        N_alive = len(Vi[alive])
-        dVdt_last=deepcopy(dVdt)
-        transient_droplets[gone]=np.zeros(RunTimeInputs['DNum']-N_alive, dtype=bool)# gone droplet are never transient
-        if not(t_transient) and transient_length>0:
-            transient_droplets[alive]=np.ones(N_alive, dtype=bool)
-            transient_times[alive] -= np.ones(N_alive)*transient_length # sum multiple transient periods
-        # if not(t_transient): # if droplets have evaporated then add transient
-        #     transient_times[gone] = np.zeros(RunTimeInputs['DNum']-N_alive)
-        #     transient_times[alive] -= np.ones(N_alive)*transient_length # sum multiple transient periods
-        #     print("min: ",min(transient_times), "max: ", max(transient_times))
-        #     transient_droplets = transient_times<0 # update transient droplets
-        # else:
-        #     transient_droples =  np.zeros(N_alive, dtype=bool) # must all now be non transient
-        print("\tNo. of alive droplets left: ", N_alive)
-        print("_____________________________________________")
-        Vi = np.where(Vi>=ZERO,Vi,0)
-        gone_record=np.vstack([gone_record, gone])
-        #print("Contact Angle (\u00B0)= ", theta*180/np.pi)
-        
-    V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
-    dVdt_t=np.vstack([dVdt_t, dVdt])# add new volumes to array
-    t_i = np.vstack([t_i, t]) # add final times to array
-    theta=pm.GetCAfromV(Vi/1000, r0, ZERO)
-    theta_t=np.vstack([theta_t, theta*180/np.pi])
-    
-    print("_____________________________________________")
-    print("Residual Volume error (should=0)= ", residual)
-    print("Droplets took ",t/60, " mins to evaporate")
-    print("Completed in ", step_counter, "steps")
-    print("_____________________________________________")
-    
-    WrayResults={}
-    WrayResults["Time"]=t_i
-    WrayResults["Volume"]=V_t
-    WrayResults["Theta"]= theta_t
-    WrayResults["dVdt"]= dVdt_t
-    WrayResults["RunTimeInputs"]=RunTimeInputs
-    WrayResults["Calc_Time"]=Calc_Time    
-    return WrayResults
+    return RunTimeInputs, xcentres, ycentres, print_record

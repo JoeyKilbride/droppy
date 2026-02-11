@@ -30,7 +30,9 @@ def get_radial_position(X, Y, xref, yref):
 def TouchingCircles(cx,cy,r,ca):
     """filters touching circles from polydisperse array.
     Returns boolean mask of touching circles to filter original arrays."""
+    print("finding touching droplets")
     N = len(cx)
+    tol=1/1000
     any_touching = False
     touching={}
     for idx in range(N): 
@@ -51,7 +53,7 @@ def TouchingCircles(cx,cy,r,ca):
             else:
                 r_jdx = r[jdx]
               
-            if ((cx[idx]-cx[jdx])**2+(cy[idx]-cy[jdx])**2) > (r_idx+r_jdx)**2:
+            if (((cx[idx]-cx[jdx])**2+(cy[idx]-cy[jdx])**2) > (r_idx+r_jdx)**2):
                 # Not touching
                 continue
             else:
@@ -62,6 +64,7 @@ def TouchingCircles(cx,cy,r,ca):
     return touching, any_touching
 
 def find_chains(touching):
+    print("finding multi-connections")
     n_chain=1
     N = len(touching)
     connected= np.zeros(N)
@@ -75,11 +78,11 @@ def find_chains(touching):
             n_chain = n_chain + 1 # update chain number
             droplets = droplets[~np.isin(droplets, chain)] # remove all found droplets
         else:
-            connected[d]=[0]
-        return connected
+
+            connected[d]=0
+    return connected
 
 def mass_centre(x,y,ms):
-    
     M  = np.sum(ms)
     x_CM = np.sum(x*ms)/M
     y_CM = np.sum(y*ms)/M

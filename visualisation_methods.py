@@ -147,42 +147,47 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     plt.show()
     return
 
-def export_video(data_path, RunTimeInputs, odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
+def export_video(data_path, RunTimeInputs, xc,yc, rec ,odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
     DTM_data = iom.load_datasets_h5py(data_path, ["t_evap", "t_print", "Theta", "Radius", "Time"])
     unique_drying_times = np.unique(DTM_data['t_evap'])
     max_time = np.max(unique_drying_times)+RunTimeInputs['dt']
 
     times = np.linspace(0,max_time,number_of_frames)
-    xs = RunTimeInputs['xcentres']
-    ys = RunTimeInputs['ycentres']
+    xs = xc[0]
+    ys = yc[0]
     width, height = int(12.80*odpi), int(10.40*odpi)
     out = cv2.VideoWriter(os.path.join(RunTimeInputs['Directory'], RunTimeInputs['Filename']+"video.avi"), cv2.VideoWriter_fourcc(*'MJPG'), vid_FPS, (width,height))
     current_backend = plt.get_backend()
     plt.switch_backend('Agg')
     # Create a figure (no need to show it)
     fig, ax = plt.subplots(constrained_layout=True)  # match size
-    printed = DTM_data["t_print"]==0
+    printed = rec[0]
     centres=list(zip(list(xs[printed]*1e6),list(ys[printed]*1e6)))
     vmax = [0,np.max(RunTimeInputs["CA"])*180/np.pi]
     all_centres=list(zip(list(xs*1e6),list(ys*1e6)))
     cs=list(zip(*all_centres))
-    mr=max(RunTimeInputs['Rb'])*1e6
-   
+    # mr=max(RunTimeInputs['Rb'])*1e6
+    mr=np.nanmax(DTM_data["Radius"][:,:])*1e6
     lims= np.array([[min(cs[0])-mr,max(cs[0])+mr],[min(cs[1])-mr,max(cs[1])+mr]])
-
     cmap1, normcmap1, collection1=CreateDroplets(ax, fig, cmap_name, centres, 
                                                     RunTimeInputs['Rb'][printed]*1e6, RunTimeInputs["CA"][printed]*180/np.pi, vmax[0], vmax[1], True, True, lims=lims)
     
     ax.set_aspect('equal', adjustable='box')
-    
+    xcs=np.array(list(xc.keys()))
     title = fig.suptitle("")
+
     for tdx, t in enumerate(times):
-        
-        
+    
         print("writing frame: ", tdx+1, "/"+str(number_of_frames))
         t_i = np.argmin(abs(DTM_data['Time']-t))
-        printed = DTM_data["t_print"]<=t_i
-        centres=list(zip(list(xs[printed]*1e6),list(ys[printed]*1e6)))
+        
+        arg=np.argwhere(xcs<=t)[-1][0]       
+        rp=np.array(list(rec.keys()))
+        argp=np.argwhere(rp<=t)[-1][0]
+        printed=rec[rp[argp]]
+        xct=xc[xcs[arg]]
+        yct=yc[xcs[arg]]
+        centres=list(zip(list(xct[printed]*1e6),list(yct[printed]*1e6)))
         if RunTimeInputs['mode']=="CCR":
             r0=RunTimeInputs['Rb'][printed]
             theta = DTM_data["Theta"][t_i,:][printed]
@@ -191,8 +196,8 @@ def export_video(data_path, RunTimeInputs, odpi=200, vid_FPS=25, number_of_frame
 
         else:
             ax.clear()
-            r0 = DTM_data["Radius"][t_i,:][printed]
-            CreateDroplets(ax, fig, cmap_name, centres, r0*1e6, RunTimeInputs["CA"][printed]*180/np.pi, vmax[0], vmax[1], True, False, lims=lims)
+            r0 = DTM_data["Radius"][t_i,:]#[printed]
+            CreateDroplets(ax, fig, cmap_name, centres, r0*1e6, RunTimeInputs["CA"]*180/np.pi, vmax[0], vmax[1], True, False, lims=lims)
             ax.set_aspect('equal', adjustable='box')
             title.set_text(f"t = {t:.2f}")
     
