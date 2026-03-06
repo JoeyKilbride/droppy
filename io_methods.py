@@ -227,9 +227,7 @@ def load_datasets_h5py(file, dataset_names, resolution=1):
                 else:
                     subnames = list(f[name].keys())
                     for subname in subnames:
-                        print("subname:", subname)
                         dset  = f[name][subname][res_var]   # load full dataset into memory
-                        print("Dataset: ",isinstance(dset, h5py.Dataset))
                         if subname==subnames[0]:
                             n_time, max_droplets = dset.shape
                         n_time, n_droplets = dset.shape
