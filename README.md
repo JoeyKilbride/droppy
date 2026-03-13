@@ -22,17 +22,16 @@
 
 ## 🧠 About
 
-The project allows you to 'simulate' the evaporation of multiple droplets on surfaces in a quasi-static environment. The spherically capped droplets can be initialised with any distribution of initial sizes and positions. The analytic theory is for diffusion limited evaporation and models the vapour interactions between the (spherical cap) droplets as they evaporate. 
+The project allows you to 'simulate' the evaporation/condensation of multiple droplets on surfaces in a quasi-static environment. The spherically capped droplets can be initialised with any distribution of initial sizes and positions. The analytic theory is for isothermal diffusion limited mass transfer and models the vapour interactions between the (spherical cap) droplets as they evaporate. 
 
 ---
 
 ## ✨ Features
 
-- ✅ Droplets can evaporation in constant contact angle (CCA) mode or constant contact radius (CCR) mode. 
+- ✅ Droplets can evaporation/condense in constant contact angle (CCA) mode or constant contact radius (CCR) mode. 
 - ✅ The ambient humidity can be calculated dynamically based on amount of volume evaporated from the droplets, simulating an enclosed box.
 - ✅ The numerical evolution of time can be Euler of a 4th Order Runge Kutta method. 
-- ✅ Droplets can be set to appear at different times. For example to simulate rain landing on a window, or the order in which they are printed on the surface.
-
+- ✅ Droplet which touch will coaelesce and continue evaporating and condensing.
 ---
 
 ## ⚙️ Installation
@@ -95,6 +94,7 @@ https://orcid.org/0000-0002-3699-6079
 
 # Acknowledgement
 If you make use of the code please cite: DropPy, J.J. Kilbride. (2025)
+
 
 
 
