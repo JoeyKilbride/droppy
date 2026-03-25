@@ -31,6 +31,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     ycentres[0] = RunTimeInputs['ycentres']
     r0       = RunTimeInputs['Rb']
     theta    = RunTimeInputs['CA']
+    theta_a    = RunTimeInputs['CA_a']
+    theta_r    = RunTimeInputs['CA_r']
     t        = 0
     Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
@@ -94,7 +96,9 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
     if plot:
         vmax1 = [0,np.max(theta)*180/np.pi]
-
+        if RunTimeInputs['mode'] == "CAH":
+            vmax1 = [np.min(theta_r)*(180/np.pi),np.max(theta_a)*(180/np.pi)]
+            cmtype1='rainbow'
         dVdt_new = pm.Masoud_fast(xc, yc, r0, dVdt_iso, theta)
         vmax2 = [min(dVdt_new),max(dVdt_new)]
         if vmax2[0]>0: # all condensing
@@ -228,44 +232,36 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             elif (RunTimeInputs['mode'] == "CCA"):
                 Vi=np.where(Vi<0,0,Vi)
                 r0 = pm.GetBase(theta, Vi/1000)
+                
             print("average radius: ", np.mean(r0[alive]))
             Vprev       = deepcopy(Vi)
 
             if RunTimeInputs['model'] == "Masoud":
-                
                 dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
                                             RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
                                             RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
                                             nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
-                
                 tic = time.perf_counter()
-         
                 dVdt_new = pm.Masoud_fast(xc[alive], yc[alive], r0[alive], dVdt_iso, theta[alive])
-                
                 toc = time.perf_counter()
                 print(f"Matrix inversion time: {toc-tic:.3f}s")
                 #dVdt_new=dVdt_new+(dVdt_new) #*rand_evap[alive]
                 dVdt[alive] = deepcopy(dVdt_new) #*bias[alive] # update new evaporation rates for living droplets 
             
             if RunTimeInputs['model'] == 'Wray':
-                if (RunTimeInputs['mode'] == "CCA"):
-                    dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                            nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19    
-                else:
-                    dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                            nmols[alive], RunTimeInputs['i'])
-            
+                dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
+                                        RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                        nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19    
+                tic = time.perf_counter()
                 dVdt_new=pm.WrayFabricant(xc[alive], yc[alive], r0[alive], dVdt_iso)
+                toc = time.perf_counter()
+                print(f"Matrix inversion time: {toc-tic:.3f}s")
                 dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets
+
             dVdt        = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
-        
             t_i     = np.vstack([t_i, t]) # record time steps
             V_t     = np.vstack([V_t, Vi]) # add new volumes to array
-
             xc_t    = np.vstack([xc_t, xc])
             yc_t    = np.vstack([yc_t, yc])
             theta_t = np.vstack([theta_t, theta*180/np.pi])
@@ -273,6 +269,18 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
+            if (RunTimeInputs['mode'] == "CAH"):
+                Vi=np.where(Vi<0,0,Vi)            
+                cca_droplets1 = np.logical_and(theta[alive]>=theta_a[alive], dVdt[alive]>0)
+                cca_droplets2 = np.logical_and(theta[alive]<=theta_r[alive], dVdt[alive]<0)
+                cca_droplets  = np.logical_or(cca_droplets1, cca_droplets2)
+                mask = np.zeros_like(alive, dtype=bool)
+                mask[alive] = cca_droplets
+                r0[mask] = pm.GetBase(theta[alive][cca_droplets], Vi[alive][cca_droplets]/1000)
+                ccr_droplets = np.logical_not(cca_droplets)
+                mask[alive] = ccr_droplets # a mask is used here as two booleans create a copy and dont update theta
+                theta[mask] = pm.GetCAfromV(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], ZERO)
+
             print(f"dV/V: {max((dVdt[alive]*dt)/Vi[alive])*100:.3f}%")
             print(f"Volume remaining: {100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])):.5f}%")
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
@@ -287,7 +295,6 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                                                 RunTimeInputs['Ambient_T'] +273.15, 
                                                 RunTimeInputs['rho_liquid'], 
                                                 np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
-            
             if len(t_i) == buffer_size:
                 print("writing data - buffer full")
                 with h5py.File(output_target+".h5", "a") as f:
@@ -365,6 +372,12 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             yc_old = deepcopy(yc[alive])
             xc = np.delete(xc[alive], absorbed_indices)
             yc = np.delete(yc[alive], absorbed_indices)
+            theta_a_old = deepcopy(theta_a[alive])
+            theta_r_old = deepcopy(theta_r[alive])
+            theta_a = np.delete(theta_a[alive], absorbed_indices)
+            theta_r = np.delete(theta_r[alive], absorbed_indices)
+            theta_old = deepcopy(theta[alive])
+            theta = np.delete(theta[alive], absorbed_indices)
             printed=np.delete(printed[alive], absorbed_indices)
             nmols_old = deepcopy(nmols[alive])
             nmols = np.delete(nmols[alive], absorbed_indices)
@@ -385,14 +398,15 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 xc[new_idx] = xc_i # new centres for the coelesced droplet
                 yc[new_idx] = yc_i
                 Vi[new_idx] = vc_i # new volume is total of the coelesced droplets
-
+                theta[new_idx] = np.mean(theta_old[args]) # parent droplet's contact angle is assumed mean (could be changed to other functions of the child droplets' contact angles in future)
+                # it is possible to make the contact angle a function of position here for patterned substrates! Rita?    
             if (RunTimeInputs['mode'] == "CCR"):
                 theta = np.ones(len(Vi))*np.pi/4 # This is a bodge for future sorting out!!!
                                                  # as CCR is a bit unphysical in a coelescence context.
                 r0 = pm.GetBase(theta, Vi/1000)
                 # theta = pm.GetCAfromV(xcentres[t]/1000, r0, ZERO)  
             elif (RunTimeInputs['mode'] == "CCA"):
-                theta = np.ones(len(Vi))*theta[0]
+                # theta = deepcopy(theta_a) #np.ones(len(Vi))*theta[0]
                 Vi=np.where(Vi<0,0,Vi)
                 r0 = pm.GetBase(theta, Vi/1000)
           
@@ -438,23 +452,19 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     # Save end values
     V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
     t_i = np.vstack([t_i, t]) # add final times to array
-    
+    Vi=np.where(Vi<0,0,Vi)
+    # r0 = pm.GetBase(theta, Vi/1000)
+    r0_t    = np.vstack([r0_t, r0])
+    xc_t    = np.vstack([xc_t, xc])
+    yc_t    = np.vstack([yc_t, yc])
+    # theta = pm.GetCAfromV(Vi/1000, r0, ZERO) 
+    theta_t= np.vstack([theta_t, theta*180/np.pi])
     if (RunTimeInputs['mode'] == "CCR"):
-        theta = pm.GetCAfromV(Vi/1000, r0, ZERO) 
-        theta_t= np.vstack([theta_t, theta*180/np.pi])
-        xc_t    = np.vstack([xc_t, xc])
-        yc_t    = np.vstack([yc_t, yc])
         # update final plot
         if plot:
             vm.UpdateDroplets(ax1, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
             vm.UpdateDroplets(ax2, cmap2, normcmap2, collection2, dVdt,r0, t)
     elif (RunTimeInputs['mode'] == "CCA"):
-        Vi=np.where(Vi<0,0,Vi)
-        r0 = pm.GetBase(theta, Vi/1000)
-        r0_t    = np.vstack([r0_t, r0])
-        xc_t    = np.vstack([xc_t, xc])
-        yc_t    = np.vstack([yc_t, yc])
-
         if plot:    
             # update final plot
             ax1.clear()

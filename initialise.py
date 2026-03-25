@@ -51,6 +51,18 @@ def create_initial_conditions(val, directory):
     RunTimeInputs['n_mols'] = c.n_mols         # mols of solute in liquid
     RunTimeInputs['i'] = c.i                   # Van hoff factor
 
+    if c.mode == "CAH":
+        oor1 = np.any(c.CA > c.CA_a)
+        oor2 = np.any(c.CA < c.CA_r)
+        if oor1 or oor2:
+            print("Error: For CAH mode, initial contact angle must be between advancing and receding contact angles.")
+            if oor1:
+                print("Initial contact angle greater than advancing contact angle for at least one droplet.")
+            if oor2:
+                print("Initial contact angle less than receding contact angle for at least one droplet.")
+            sys.exit()
+        RunTimeInputs['CA_a'] = c.CA_a         # Advancing contact angle of the droplets (rads)
+        RunTimeInputs['CA_r'] = c.CA_r         # Receding contact angle of the droplets (rads)
 
     if c.D=="water":
         RunTimeInputs['D']=pm.diffusion_coeff(c.Ambient_T)

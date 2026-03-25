@@ -23,9 +23,12 @@ CX = np.array([-3,0,3])/1000 # X coordinates of the droplets (m)
 CY = np.array([0,0,0]) # Y coordinates of the droplets (m)
 Rb = np.ones(len(CX))/1000 # Base contact radius of the droplets (m)
 CA = np.ones(len(CX))*np.pi/2 # Initial contact angle of the droplets (rads)
+mode = "CCA" # constant contact area ("CCA"), constant contact radius ("CCR"), contact angle hysteresis ("CAH")
+if mode == "CAH":
+    CA_a = np.ones(len(CX))*np.pi/2 # Advancing contact angle of the droplets (rads)
+    CA_r= np.ones(len(CX))*np.pi/2 # Receding contact angle of the droplets (rads)
 n_mols = np.zeros(len(CX)) # number of mols of solute in each droplet (mols)
 i=1 # Van Hoff factor, NaCl=2, disused when n_mols=0
-mode = "CCA" # constant contact area ("CCA"), constant contact radius ("CCR")
 box_volume =  np.inf # volume of the box droplets are evaporating in. Infinite is normal.
 Ambient_RHs = [0.25] # Fraction [0-1]
 Ambient_T = 22   # Degrees C

@@ -96,8 +96,10 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     plt.close('all')
     fig_V = plt.figure()
     ax_V = fig_V.add_subplot(1, 1, 1)
-    fig_idx = plt.figure()
-    ax_idx = fig_idx.add_subplot(1, 1, 1)
+    fig_ca = plt.figure()
+    ax_ca = fig_ca.add_subplot(1, 1, 1)
+    fig_radius = plt.figure()
+    ax_radius = fig_radius.add_subplot(1, 1, 1)
     fig_dVdt = plt.figure()
     ax_dVdt = fig_dVdt.add_subplot(1, 1, 1)
     fig_dt, ax_dt = plt.subplots()
@@ -119,11 +121,8 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
             elem=np.argmin(Results['Volume'][:,pdx]) # finds element where V is first zero.
 
         t_evap[pdx]=Results['Time'][elem]
-        if RunTimeInputs['mode']=="CCR":
-            ax_idx.plot(Results['Time']/np.max(Results['Time']), Results['Theta'][:,pdx], label=name, marker="o")
-        else:
-            ax_idx.plot(Results['Time']/np.max(Results['Time']), Results['Radius'][:,pdx], label=name, marker="o")
-            
+        ax_ca.plot(Results['Time']/np.max(Results['Time']), Results['Theta'][:,pdx], label=name, marker="o")    
+        ax_radius.plot(Results['Time']/np.max(Results['Time']), Results['Radius'][:,pdx], label=name, marker="o")
         ax_dVdt.plot(Results['Time']/np.max(Results['Time']), Results['dVdt'][:,pdx]*1e6, label=name)
         s_dt = ax_dt.scatter(RunTimeInputs['xcentres'],RunTimeInputs['ycentres'],\
         c=pm.normalise(t_evap), cmap=cmap_name, vmin=0, vmax=1)
@@ -134,19 +133,20 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     ax_V.set_xlabel(r"$t/\tau_{max}$")
     if RunTimeInputs['DNum']<15:
         ax_V.legend()
-        ax_idx.legend()
+        ax_ca.legend()
+        ax_radius.legend()
         ax_dVdt.legend()
         
-    ax_idx.set_xlabel(r"$t/\tau_{max}$")
-    if RunTimeInputs['mode']=="CCR":
-        ax_idx.set_ylabel("\u03B8 (\u00b0)")
-    else:
-        ax_idx.set_ylabel(r"$a$ (mm)")
+    ax_ca.set_xlabel(r"$t/\tau_{max}$")
+    ax_radius.set_xlabel(r"$t/\tau_{max}$")
+    ax_ca.set_ylabel("\u03B8 (\u00b0)")
+    ax_radius.set_ylabel(r"$a$ (mm)")
     ax_dVdt.set_xlabel(r"$t/\tau_{max}$")
     ax_dVdt.set_ylabel(r"$\frac{dV}{dt} (\mu$"+ r"$Ls^{-1})$")
 
     fig_V.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_V.png"))
-    fig_idx.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_CA.png"))
+    fig_ca.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_CA.png"))
+    fig_radius.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_radius.png"))
     fig_dVdt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_dVdt.png"))
     fig_dt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_drytime_heatmap.svg"))
     print("writing tevap:")
@@ -171,14 +171,14 @@ def export_video(data_path, RunTimeInputs, xc,yc, rec ,odpi=200, vid_FPS=25, num
     fig, ax = plt.subplots(constrained_layout=True)  # match size
     printed = rec[0]
     centres=list(zip(list(xs[printed]*1e6),list(ys[printed]*1e6)))
-    vmax = [0,np.max(RunTimeInputs["CA"])*180/np.pi]
+    vmax = [np.min(DTM_data['Theta']),np.max(DTM_data['Theta'])]
     all_centres=list(zip(list(xs*1e6),list(ys*1e6)))
     cs=list(zip(*all_centres))
     # mr=max(RunTimeInputs['Rb'])*1e6
     mr=np.nanmax(DTM_data["Radius"][:,:])*1e6
     lims= np.array([[min(cs[0])-mr,max(cs[0])+mr],[min(cs[1])-mr,max(cs[1])+mr]])
     cmap1, normcmap1, collection1=CreateDroplets(ax, fig, cmap_name, centres, 
-                                                    RunTimeInputs['Rb'][printed]*1e6, RunTimeInputs["CA"][printed]*180/np.pi, vmax[0], vmax[1], True, True, lims=lims)
+                                                    RunTimeInputs['Rb'][printed]*1e6, DTM_data['Theta'][0,printed], vmax[0], vmax[1], True, True, lims=lims)
     
     ax.set_aspect('equal', adjustable='box')
     xcs=np.array(list(xc.keys()))
@@ -198,13 +198,15 @@ def export_video(data_path, RunTimeInputs, xc,yc, rec ,odpi=200, vid_FPS=25, num
         if RunTimeInputs['mode']=="CCR":
             r0=RunTimeInputs['Rb']#[printed]
             theta = DTM_data["Theta"][t_i,:]#[printed]
-            UpdateDroplets(ax, cmap1, normcmap1, collection1, theta*180/np.pi,r0, t)
+            UpdateDroplets(ax, cmap1, normcmap1, collection1, theta,r0, t)
             title.set_text(f"t = {t:.2f} (s)")
 
         else:
             ax.clear()
             r0 = DTM_data["Radius"][t_i,:]#[printed]
             radii = r0[~np.isnan(r0)]*1e6
+            theta = DTM_data["Theta"][t_i,:] [~np.isnan(r0)]
+
             # arg = np.argwhere(xcs<=DTM_data['Time'][t_i])[-1][0]
             xc = DTM_data["xc"][t_i,:][~np.isnan(DTM_data["xc"][t_i,:])]
             yc = DTM_data["yc"][t_i,:][~np.isnan(DTM_data["yc"][t_i,:])]
@@ -212,7 +214,7 @@ def export_video(data_path, RunTimeInputs, xc,yc, rec ,odpi=200, vid_FPS=25, num
             # xct=xc[xcs[arg]]
             # yct=yc[xcs[arg]]
             centres=list(zip(list(xc*1e6),list(yc*1e6)))
-            CreateDroplets(ax, fig, cmap_name, centres, radii, RunTimeInputs["CA"]*180/np.pi, vmax[0], vmax[1], True, False, lims=lims)
+            CreateDroplets(ax, fig, cmap_name, centres, radii, theta, vmax[0], vmax[1], True, False, lims=lims)
             ax.set_aspect('equal', adjustable='box')
             title.set_text(f"t = {t:.2f}")
     
