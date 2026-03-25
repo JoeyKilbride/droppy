@@ -28,7 +28,7 @@ The project allows you to 'simulate' the evaporation of multiple droplets on sur
 
 ## ✨ Features
 
-- ✅ Droplets can evaporation in constant contact angle (CCA) mode or constant contact radius (CCR) mode. 
+- ✅ Droplets can evaporation in constant contact angle (CCA) mode, constant contact radius (CCR) mode or in a mixed mode betweeen and advancing and receding contact          angle (CAH)
 - ✅ The ambient humidity can be calculated dynamically based on amount of volume evaporated from the droplets, simulating an enclosed box.
 - ✅ The numerical evolution of time can be Euler of a 4th Order Runge Kutta method. 
 - ✅ Droplets can be set to appear at different times. For example to simulate rain landing on a window, or the order in which they are printed on the surface.
