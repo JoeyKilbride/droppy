@@ -38,8 +38,6 @@ def CreateDroplets(ax, fig, cmaptype, centres, r0, C, vmin, vmax, multiplot, col
     s = ax.add_collection(collection)
     if not(isinstance(lims, np.ndarray)):
         cs=list(zip(*centres))
-        print("r0: ",r0)
-        print("r0: ",r0[np.isfinite(r0)])
         if len(r0[np.isfinite(r0)])==0:
             mr=0
         else:
@@ -126,7 +124,6 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
         ax_dVdt.plot(Results['Time']/np.max(Results['Time']), Results['dVdt'][:,pdx]*1e6, label=name)
         s_dt = ax_dt.scatter(RunTimeInputs['xcentres'],RunTimeInputs['ycentres'],\
         c=pm.normalise(t_evap), cmap=cmap_name, vmin=0, vmax=1)
-    print("t_evap: ", t_evap)
     fig_dt.colorbar(s_dt, ax=ax_dt,  orientation='horizontal')
     
     ax_V.set_ylabel(r"$V (\mu L)$")
@@ -274,10 +271,6 @@ def Compare2Data(tResults, eResults, cmap_name):
     ax_lin.scatter(yline,ylint, color='k')
     ll = np.min([np.min(yline),np.min(ylint)])
     ax_lin.plot([ll,1],[ll,1])
-
-    print(np.max((yline-ylint)/yline))
-    print(np.min((yline-ylint)/yline))
-    print(np.mean((yline-ylint)/yline))
 
     # labeling + formatting
     ax_lin.set_ylabel(r"$\tau_{th}$")

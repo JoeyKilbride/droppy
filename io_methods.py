@@ -154,7 +154,6 @@ def stream_hdf5_collection(f, buffer, buffer_name, group=None):
     if group is None:
         container = f
     else:
-        print("group:",group)
         container = f.require_group(group)
 
     if buffer_name in container:
@@ -217,7 +216,7 @@ def load_datasets_h5py(file, dataset_names, resolution=1):
         res_var = slice(None, None, resolution)
     else:
         res_var = slice(None)
-    print("In the right function")
+
     with h5py.File(file+".h5", "r") as f:
         for name in dataset_names:
             if name in f:
@@ -229,11 +228,11 @@ def load_datasets_h5py(file, dataset_names, resolution=1):
                     for subname in subnames:
                         dset  = f[name][subname][res_var]   # load full dataset into memory
                         n_time, n_droplets = dset.shape
-                        print("n_time: ",n_time)
+                        
                         if subname==subnames[0]:
                             n_time, max_droplets = dset.shape
                         pad = np.full((n_time, max_droplets),np.nan)
-                        pad[:,:n_droplets]=dset[res_var]
+                        pad[:,:n_droplets]=dset
                         chunks.append(pad)
                 data[name] = np.concatenate(chunks, axis=0)
                 
