@@ -31,8 +31,12 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     ycentres[0] = RunTimeInputs['ycentres']
     r0       = RunTimeInputs['Rb']
     theta    = RunTimeInputs['CA']
-    theta_a    = RunTimeInputs['CA_a']
-    theta_r    = RunTimeInputs['CA_r']
+    if RunTimeInputs['mode'] == "CCA":
+        theta_a    = RunTimeInputs['CA']
+        theta_r    = RunTimeInputs['CA']
+    else:
+        theta_a    = RunTimeInputs['CA_a']
+        theta_r    = RunTimeInputs['CA_r']
     t        = 0
     Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
