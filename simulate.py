@@ -403,6 +403,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 yc[new_idx] = yc_i
                 Vi[new_idx] = vc_i # new volume is total of the coelesced droplets
                 theta[new_idx] = np.mean(theta_old[args]) # parent droplet's contact angle is assumed mean (could be changed to other functions of the child droplets' contact angles in future)
+                
                 # it is possible to make the contact angle a function of position here for patterned substrates! Rita?    
             if (RunTimeInputs['mode'] == "CCR"):
                 theta = np.ones(len(Vi))*np.pi/4 # This is a bodge for future sorting out!!!
@@ -412,6 +413,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             elif (RunTimeInputs['mode'] == "CCA"):
                 # theta = deepcopy(theta_a) #np.ones(len(Vi))*theta[0]
                 Vi=np.where(Vi<0,0,Vi)
+                r0 = pm.GetBase(theta, Vi/1000)
+            elif (RunTimeInputs['mode'] == "CAH"):
                 r0 = pm.GetBase(theta, Vi/1000)
           
             # save the positions for the next segment (post coelescence)
