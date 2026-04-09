@@ -22,7 +22,7 @@
 
 ## 🧠 About
 
-The project allows you to 'simulate' the evaporation of multiple droplets on surfaces in a quasi-static environment. The spherically capped droplets can be initialised with any distribution of initial sizes and positions. The analytic theory is for diffusion limited evaporation and models the vapour interactions between the (spherical cap) droplets as they evaporate. 
+The project allows you to 'simulate' the evaporation of multiple droplets on surfaces in a quasi-static environment. The spherically capped droplets can be initialised with any distribution of initial sizes and positions. The analytic theory is for diffusion limited evaporation and models the vapour interactions between the (spherical cap) droplets as they evaporate. Some example videos of droppy simulations can be seen on YouTube: https://www.youtube.com/channel/UCrCEatLcpNHZuYuQT4CEDZA.
 
 ---
 
