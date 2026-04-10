@@ -352,7 +352,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 dVdt_t = iom.stream_hdf5_collection(f, dVdt_t, dVdt_segment, group="dVdt")
                 if RunTimeInputs['box_volume']!=np.inf:
                     RH_t = iom.stream_hdf5_collection(f, RH_t, "Ambient_RHs")
-                
+                    RH_t        = np.empty((0,1), float)    
                 theta_t = iom.stream_hdf5_collection(f, theta_t, theta_segment, group ="Theta")
                 r0_t = iom.stream_hdf5_collection(f, r0_t, radius_segment, group="Radius")
                 xc_t = iom.stream_hdf5_collection(f, xc_t, radius_segment, group="xc")
