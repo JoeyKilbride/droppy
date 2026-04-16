@@ -28,10 +28,10 @@ The project allows you to 'simulate' the evaporation of multiple droplets on sur
 
 ## ✨ Features
 
-- ✅ Droplets can evaporation in constant contact angle (CCA) mode, constant contact radius (CCR) mode or in a mixed mode betweeen and advancing and receding contact          angle (CAH)
+- ✅ Droplets can evaporation in constant contact angle (CCA) mode, constant contact radius (CCR) mode or in a mixed mode between and advancing and receding contact angle (CAH)
 - ✅ The ambient humidity can be calculated dynamically based on amount of volume evaporated from the droplets, simulating an enclosed box.
 - ✅ The numerical evolution of time can be Euler of a 4th Order Runge Kutta method. 
-- ✅ Droplets can be set to appear at different times. For example to simulate rain landing on a window, or the order in which they are printed on the surface.
+- ✅ Droplet which touch will coaelesce to their centre of mass and continue evaporating and/or condensing.
 
 ---
 
@@ -40,7 +40,7 @@ To install the project clone (or download) the repo.
 
 ### Using the terminal
 1. Open the terminal and cd to the preferred installation directory. ie. `cd C:\User\documents` (windows), `cd /user/name/documents` (Mac).
-2. Then clone with: `git clone https://github.com/JoeyKilbride/Multiple-Droplets-Theory-Models.git droppy_repo`.
+2. Then clone with: `git clone https://github.com/JoeyKilbride/droppy.git droppy_repo`.
 
 ### Using Zip 
 1. Click green code button.
