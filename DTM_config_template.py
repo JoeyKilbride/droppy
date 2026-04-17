@@ -49,7 +49,10 @@ export_nframes=30
 
 #_______Simulation parameters_____________________________________________
 filter_touching = False # filters out droplets which are touching (potentially not working!)
-dt = 1             # timestep size (s)
+dt = 1             # timestep size (s), or "adaptive" will choose timestep based on an error tolerance 
+if dt == "adaptive":
+    error_tol = 0.00001 # error tolerance for adaptive time stepping (fraction of volume evaporated in a timestep)
+    dt_min=1e-6 # seconds - minimum timestep for adaptive stepping, should be nonzero 
 # t=0                   # initial time (s) - should alway be zero (probably should be removed)
 model="Masoud"           # which model to simulate with "Wray" or "Masoud (Wray may need updating)"
 nterms = 1  # number of terms in the Masoud expansion

@@ -40,6 +40,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     t        = 0
     Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
+    if dt == "adaptive":
+        adaptive_timestep = True
     RH       = RunTimeInputs['Ambient_RHs'][0]
     N = RunTimeInputs['DNum']
     nmols = RunTimeInputs['n_mols']
@@ -271,8 +273,17 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             theta_t = np.vstack([theta_t, theta*180/np.pi])
             r0_t    = np.vstack([r0_t, r0])
             dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
+
+            if adaptive_timestep:
+                dt = RunTimeInputs['error_tol']/abs(max((dVdt[alive])/Vi[alive]))
+                if dt<=RunTimeInputs['dt_min']:
+                    dt = RunTimeInputs['dt_min']
+                print("timestep: ", dt, " (s)")
+            # =============================================================
+            # Update time, volume and radius arrays for the next iteration
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
+            # =============================================================
             if (RunTimeInputs['mode'] == "CAH"):
                 Vi=np.where(Vi<0,0,Vi)            
                 cca_droplets1 = np.logical_and(theta[alive]>=theta_a[alive], dVdt[alive]>0)
@@ -285,7 +296,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 mask[alive] = ccr_droplets # a mask is used here as two booleans create a copy and dont update theta
                 theta[mask] = pm.GetCAfromV(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], ZERO)
 
-            print(f"dV/V: {max((dVdt[alive]*dt)/Vi[alive])*100:.3f}%")
+            # print(f"dV/V: {max((dVdt[alive]*dt)/Vi[alive])*100:.3f}%")
             print(f"Volume remaining: {100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])):.5f}%")
             residual = residual+sum(Vi[np.where(Vi<ZERO)])
             if RunTimeInputs['box_volume']!=np.inf:
@@ -334,7 +345,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                     plt.pause(0.001)
 
             dVdt        = np.zeros(N, float)
-            print(f"| {t:2f} ",end="", flush=True)
+            print(f"| {t:2f} ", flush=True)
            
             any_evaporated = np.any(Vi[alive] <= ZERO)
             has_V   = Vi>ZERO

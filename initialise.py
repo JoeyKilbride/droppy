@@ -30,6 +30,9 @@ def create_initial_conditions(val, directory):
     RunTimeInputs={} # defines dict
     RunTimeInputs['Rb']=c.Rb                 # Droplet base radius (metres)
     RunTimeInputs['dt']= c.dt                # single number (s)
+    if c.dt == "adaptive":
+        RunTimeInputs['error_tol'] = c.error_tol # error tolerance for adaptive time stepping
+        RunTimeInputs['dt_min'] = c.dt_min # minimum timestep for adaptive stepping 
     RunTimeInputs['CA']=c.CA                 # as 1D np array (rads)
     RunTimeInputs['xcentres']=c.CX           # as 1D np array ()
     RunTimeInputs['ycentres']=c.CY           # as 1D np array
@@ -97,7 +100,7 @@ for i in range(1):
     if saving:
         vm.ReportResults(out_target, RunTimeInputs, cmap_name)
         name = os.path.join(directory,'video')
-        vm.export_video(out_target, RunTimeInputs, xc,yc, rec_p, number_of_frames=export_nframes, odpi=set_dpi, vid_FPS = set_FPS, cmap_name='jet')
+        vm.export_video(RunTimeInputs, odpi=set_dpi, vid_FPS = set_FPS, number_of_frames=export_nframes, cmap_name='jet')
     if compare:
         eResults = iom.load_MDL_pickle(RunTimeInputs['Directory'])
         if 'sort' in list(RunTimeInputs.keys()):

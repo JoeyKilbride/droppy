@@ -30,9 +30,9 @@ The project allows you to 'simulate' the evaporation of multiple droplets on sur
 
 - ✅ Droplets can evaporation in constant contact angle (CCA) mode, constant contact radius (CCR) mode or in a mixed mode between and advancing and receding contact angle (CAH)
 - ✅ The ambient humidity can be calculated dynamically based on amount of volume evaporated from the droplets, simulating an enclosed box.
-- ✅ The numerical evolution of time can be Euler of a 4th Order Runge Kutta method. 
 - ✅ Droplet which touch will coaelesce to their centre of mass and continue evaporating and/or condensing.
-
+- ✅ The numerical evolution of time can be Euler of a 4th Order Runge Kutta method. 
+- ✅ Timestep can be adaptive.
 ---
 
 ## ⚙️ Installation
