@@ -29,10 +29,11 @@ The project allows you to 'simulate' the evaporation of multiple droplets on sur
 ## ✨ Features
 
 - ✅ Droplets can evaporation in constant contact angle (CCA) mode, constant contact radius (CCR) mode or in a mixed mode between and advancing and receding contact angle (CAH)
-- ✅ The ambient humidity can be calculated dynamically based on amount of volume evaporated from the droplets, simulating an enclosed box.
+- ✅ The ambient humidity can be calculated dynamically based on the net evaporation/condensation from the droplets, simulating an sealed box.
 - ✅ Droplet which touch will coaelesce to their centre of mass and continue evaporating and/or condensing.
-- ✅ The numerical evolution of time can be Euler of a 4th Order Runge Kutta method. 
+- ✅ The numerical evolution of time can be Euler of a 4th Order Runge Kutta method (see other branches). 
 - ✅ Timestep can be adaptive.
+- ✅ Simulation data is saved in chunks using h5py, to avoid OOM.
 ---
 
 ## ⚙️ Installation
@@ -87,10 +88,10 @@ pip install -r requirements.txt
 5. If everything has been set correctly it will start simulating the evaporation of the specified droplets.
    By default this is a 3 droplet line.
 
-Once the code has terminated, as long as `saving = True`, it will display some default graphs which can be closed. These graphs as well as a pickle file containing all the information from the simulation, ie. the volume of each droplet as a function of time, is saved to the folder created with the file 'DTM_config.py'. This pickle can be reloaded into python and plotted in the desired manner. 
+Once the code has terminated, as long as `saving = True`, it will create some default graphs which can be closed. These graphs as well as a .h5 file containing all the information from the simulation, ie. the volume of each droplet as a function of time, is saved to the folder created with the file 'DTM_config.py'. This .h5 can be reloaded into python and plotted in the desired manner. There is also a pickle file containing the initialisation parameters used. A video is exported of the simulation as a .avi file.
 
 # Contact
-For questions bug reporting and help email me joey.kilbride@ed.ac.uk.
+For questions bug reporting and help, email me joey.kilbride@ed.ac.uk.
 https://orcid.org/0000-0002-3699-6079
 
 # Acknowledgement
