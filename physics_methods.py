@@ -27,40 +27,37 @@ def get_radial_position(X, Y, xref, yref):
     radial = np.sqrt(((X-xref)**2+(Y-yref)**2))
     return radial 
 
-def TouchingCircles(cx,cy,r,ca):
-    """filters touching circles from polydisperse array.
+def TouchingCircles(cx, cy, r, ca):
+    """filters touching circles from polydisperse array using vectorized operations.
     Returns boolean mask of touching circles to filter original arrays."""
     print("finding touching droplets")
     N = len(cx)
-    tol=1/1000
+    
+    # Vectorized: compute effective radii for all droplets
+    r_eff = np.where(ca > np.pi/2, r / np.sin(ca), r)
+    
+    # Vectorized: compute all pairwise center-to-center distances
+    cx_diff = cx[:, np.newaxis] - cx[np.newaxis, :]  # shape (N, N)
+    cy_diff = cy[:, np.newaxis] - cy[np.newaxis, :]  # shape (N, N)
+    distances_sq = cx_diff**2 + cy_diff**2
+    
+    # Vectorized: compute all pairwise sums of radii
+    r_sum = r_eff[:, np.newaxis] + r_eff[np.newaxis, :]  # shape (N, N)
+    
+    # Vectorized: determine touching condition (distance <= sum of radii)
+    touching_matrix = distances_sq <= r_sum**2
+    
+    # Set diagonal to False (droplets don't touch themselves)
+    np.fill_diagonal(touching_matrix, False)
+    
+    # Convert to dictionary format for backwards compatibility
+    touching = {}
     any_touching = False
-    touching={}
-    for idx in range(N): 
-        touching[idx]=[]
-        if ca[idx]>np.pi/2:
-            r_idx = r[idx]/np.sin(ca[idx]) # if hydrophobic, midpoints will touch first
-            # technically speaking this is an assumption as two droplets with very different 
-            # ca might still not touch when r_idx + r_jdx > the centre 2 centre separation. 
-            # This is a small effect and a unqiue situation and is therefore ignored!
-        else:
-            r_idx = r[idx]
-            
-        for jdx in range(N):
-            if jdx == idx:
-                continue
-            if ca[jdx]>np.pi/2:
-                r_jdx = r[jdx]/np.sin(ca[jdx]) # if hydrophobic, midpoints will touch first
-            else:
-                r_jdx = r[jdx]
-              
-            if (((cx[idx]-cx[jdx])**2+(cy[idx]-cy[jdx])**2) > (r_idx+r_jdx)**2):
-                # Not touching
-                continue
-            else:
-                any_touching =True
-                # Touching
-                touching[idx]=touching[idx]+[jdx]
-
+    for idx in range(N):
+        touching[idx] = np.where(touching_matrix[idx])[0].tolist()
+        if len(touching[idx]) > 0:
+            any_touching = True
+    
     return touching, any_touching
 
 def find_chains(touching):
