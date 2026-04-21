@@ -42,6 +42,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     dt       = RunTimeInputs['dt'] 
     if dt == "adaptive":
         adaptive_timestep = True
+    else: 
+        adaptive_timestep = False
     RH       = RunTimeInputs['Ambient_RHs'][0]
     N = RunTimeInputs['DNum']
     nmols = RunTimeInputs['n_mols']
@@ -352,9 +354,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             alive   = np.logical_and(has_V,printed)
             any_unprinted = np.sum(t_print<=t)>np.sum(printed)
             touching, any_touching = pm.TouchingCircles(xc[alive],yc[alive],r0[alive],theta[alive])
-
             keep_incrementing = not(any([any_evaporated, any_unprinted, any_touching]))
-
+        
         if any_touching:
             # save anything remaining in the buffer
             with h5py.File(output_target+".h5", "a") as f:
@@ -451,6 +452,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             dVdt        = np.zeros(N, float)
             t_print=np.delete(t_print,absorbed_indices)
             print_record[t]=t_print<=t
+
         has_V   = Vi>ZERO
         alive   = np.logical_and(has_V,printed)
         any_unprinted = np.sum(t_print<=t)>np.sum(printed)
