@@ -148,7 +148,7 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     fig_dt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_drytime_heatmap.svg"))
     print("writing tevap:")
     iom.write_hdf5_directly(t_evap, 't_evap', filename)
-    plt.show()
+    plt.show(block=False)
     return
 
 def export_video(RunTimeInputs ,odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
