@@ -31,12 +31,13 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     ycentres[0] = RunTimeInputs['ycentres']
     r0       = RunTimeInputs['Rb']
     theta    = RunTimeInputs['CA']
-    if RunTimeInputs['mode'] == "CCA":
-        theta_a    = RunTimeInputs['CA']
-        theta_r    = RunTimeInputs['CA']
-    else:
+    if RunTimeInputs['mode'] == "CAH":
         theta_a    = RunTimeInputs['CA_a']
         theta_r    = RunTimeInputs['CA_r']
+    else:
+        theta_a    = RunTimeInputs['CA']
+        theta_r    = RunTimeInputs['CA']
+
     t        = 0
     Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
@@ -227,7 +228,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         touching, any_touching = pm.TouchingCircles(xc[alive],yc[alive],r0[alive],theta[alive])
         keep_incrementing = not(any([any_evaporated, any_unprinted, any_touching]))
         while keep_incrementing:
-            if t>RunTimeInputs['t_terminate']:
+            if  len(Vi[alive])==1:#t>RunTimeInputs['t_terminate']:
                 print("_________________")
                 print("termination time flagged")
                 terminate=True
