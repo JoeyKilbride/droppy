@@ -212,14 +212,11 @@ def load_datasets_h5py(file, dataset_names, resolution=1):
     """
     data = {}
     print("file: ",file)
-    if resolution>1:
-        res_var = slice(None, None, resolution)
-    else:
-        res_var = slice(None)
 
     with h5py.File(file+".h5", "r") as f:
         for name in dataset_names:
             print(f"Loading dataset '{name}'...")
+            res_var = slice(None, None, resolution)
             if name in f:
                 chunks = []
                 if isinstance(f[name], h5py.Dataset):
