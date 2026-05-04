@@ -311,14 +311,20 @@ def load_MDTM_pickle_unsequential(directory, prefix=None):
 
 
 def read_imageJ_coords(directory, filename):
-    """Reads ImageJ (FIJI) droplet centre coords."""
-    data = np.genfromtxt(os.path.join(directory,filename+".txt"), dtype =(int, int, int, int), skip_header=0, names=True, usecols = (0,1,2,3))
-    #data['Y']=im_h-data['Y']
-    data['BX']=data['BX']+(data['Width']/2) # convert from upper left to centre coord
-    data['BY']=data['BY']+(data['Height']/2) # convert from upper left to centre coord
-    XY = np.array((data['BX'],data['BY']))
-    WH = np.array((data['Width'],data['Height']))
-    dr = np.mean(WH,axis=0)/2
-    rs = np.min(XY, axis=0)/2
+    """Reads ImageJ (FIJI) .txt data."""
+    target = os.path.join(directory,filename+".txt")
+    print("reading target file: ", target)
+    with open(target) as f:
+        line = f.readline()
+    N_columns = len(line.split())
+    if '\t' in line.strip(' ')[:1]:
+        columns = tuple(np.indices((N_columns+1,))[0][1:])
+    else:
+        columns = tuple(np.indices((N_columns,))[0])
+    types = tuple([float]*N_columns)
+    data = np.genfromtxt(target, dtype=types, skip_header=0, names=True, usecols = columns)
+    CX = data['X']
+    CY = data['Y']
+    r  = data['Minor']/2
     print("1. Droplet centres retrieved")
-    return data, XY, rs, dr
+    return data, CX, CY, r
