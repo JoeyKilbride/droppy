@@ -108,7 +108,7 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     yc = np.mean(RunTimeInputs["ycentres"])
     ND = len(RunTimeInputs["xcentres"])
     
-    Results = iom.load_datasets_h5py(filename, ["Time", "Volume", "Theta", "Radius", "dVdt"])
+    Results = iom.load_datasets_h5py(filename, ["Time", "Volume", "Theta", "Radius", "dVdt"], 1000)
     t_evap = np.empty([ND])
     for pdx in range(ND):
         name = "D"+str(pdx)
@@ -146,14 +146,14 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     fig_radius.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_radius.png"))
     fig_dVdt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_dVdt.png"))
     fig_dt.savefig(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['Filename']+"_drytime_heatmap.svg"))
-    print("writing tevap:")
-    iom.write_hdf5_directly(t_evap, 't_evap', filename)
-    plt.show()
+    # print("writing tevap:")
+    # iom.write_hdf5_directly(t_evap, 't_evap', filename)
+    plt.show(block=False)
     return
 
 def export_video(RunTimeInputs ,odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
-    DTM_data = iom.load_datasets_h5py(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['model']+RunTimeInputs['Filename']), ["t_evap", "t_print", "Theta", "Radius", "Time", "xc", "yc"])
-    unique_drying_times = np.unique(DTM_data['t_evap'])
+    DTM_data = iom.load_datasets_h5py(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['model']+RunTimeInputs['Filename']), ["t_print", "Theta", "Radius", "Time", "xc", "yc"], 1000)
+    unique_drying_times = np.unique(DTM_data['Time'])
 
     max_time = np.max(unique_drying_times)
 
