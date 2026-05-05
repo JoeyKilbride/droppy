@@ -54,7 +54,7 @@ if dt == "adaptive":
     error_tol = 0.00001 # error tolerance for adaptive time stepping (fraction of volume evaporated in a timestep)
     dt_min=1e-6 # seconds - minimum timestep for adaptive stepping, should be nonzero 
 # t=0                   # initial time (s) - should alway be zero (probably should be removed)
-model="Masoud"           # which model to simulate with "Wray" or "Masoud (Wray may need updating)"
+model="Masoud"           # which model to simulate with "Wray", "Masoud or "Mean field"
 nterms = 1  # number of terms in the Masoud expansion
 TL=0   # delay before updating the evaporation rates after a droplet has evaporated (s) - zero is normal for the model 
 bg=None # gradient of linear bias 

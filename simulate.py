@@ -241,14 +241,15 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 Vi=np.where(Vi<0,0,Vi)
                 r0 = pm.GetBase(theta, Vi/1000)
                 
-            print("average radius: ", np.mean(r0[alive]))
+            print("Average radius: ", np.mean(r0[alive]))
             Vprev       = deepcopy(Vi)
 
+            dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
+                                        RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                        nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
+            
             if RunTimeInputs['model'] == "Masoud":
-                dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                            nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
                 tic = time.perf_counter()
                 dVdt_new = pm.Masoud_fast(xc[alive], yc[alive], r0[alive], dVdt_iso, theta[alive])
                 toc = time.perf_counter()
@@ -256,16 +257,15 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 #dVdt_new=dVdt_new+(dVdt_new) #*rand_evap[alive]
                 dVdt[alive] = deepcopy(dVdt_new) #*bias[alive] # update new evaporation rates for living droplets 
             
-            if RunTimeInputs['model'] == 'Wray':
-                dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
-                                        RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                        nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19    
+            if RunTimeInputs['model'] == 'Wray':  
                 tic = time.perf_counter()
                 dVdt_new=pm.WrayFabricant(xc[alive], yc[alive], r0[alive], dVdt_iso)
                 toc = time.perf_counter()
                 print(f"Matrix inversion time: {toc-tic:.3f}s")
                 dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets
+            
+            if RunTimeInputs['model'] == 'Mean field':
+                dVdt[alive] = np.mean(dVdt_iso)
 
             dVdt        = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
             t_i     = np.vstack([t_i, t]) # record time steps
