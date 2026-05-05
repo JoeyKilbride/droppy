@@ -95,13 +95,12 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                                         RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
                                         RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
                                         RunTimeInputs['n_mols'], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
-    if RunTimeInputs['model'] == "Masoud":
+    else:
         dVdt_iso    = pm.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
                                                 RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
                                                 RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']
                                                 ,RunTimeInputs['n_mols'], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
-    rand_evap = np.random.normal(0, RunTimeInputs['rand'], len(dVdt_iso))/100
-    dVdt_iso = dVdt_iso+(dVdt_iso*rand_evap)
+    
     if plot:
         vmax1 = [0,np.max(theta)*180/np.pi]
         if RunTimeInputs['mode'] == "CAH":
@@ -265,7 +264,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets
             
             if RunTimeInputs['model'] == 'Mean field':
-                dVdt[alive] = np.mean(dVdt_iso)
+                dVdt[alive] = deepcopy(dVdt_iso)
 
             dVdt        = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
             t_i     = np.vstack([t_i, t]) # record time steps
