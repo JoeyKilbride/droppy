@@ -17,7 +17,7 @@ import time
 import importlib
 import sys
 
-def create_initial_conditions(val, directory):
+def create_initial_conditions(directory):
     """Function for writing dictionary initial conditions for Wray or Masoud 
     scripts."""
     print("input directory: ",directory)
@@ -83,35 +83,35 @@ def create_initial_conditions(val, directory):
     
     return RunTimeInputs, c.saving, c.live_plot, c.compare, c.cmap_name, c.dpi, c.vid_FPS, c.export_nframes
 
-directory = input('Enter a file path: ')
 
-for i in range(1):
-    RunTimeInputs, saving, live_plot, compare, cmap_name, set_dpi ,set_FPS,export_nframes = create_initial_conditions(i,directory)
+directory = sys.argv[1]
+
+RunTimeInputs, saving, live_plot, compare, cmap_name, set_dpi ,set_FPS,export_nframes = create_initial_conditions(directory)
+
+tic = time.perf_counter()
     
-    tic = time.perf_counter()
-     
-    out_name = RunTimeInputs['model']+RunTimeInputs['Filename']
-    out_target  = os.path.join(directory,out_name)
-    iom.pickle_dict(directory, out_name+"_IC", RunTimeInputs) # save initialisation data for continued simulations
-    RunTimeInputs, xc, yc , rec_p = mod.Iterate(RunTimeInputs, out_target, live_plot)
-    toc = time.perf_counter()
-    # Results['simulation_time']=toc-tic    
+out_name = RunTimeInputs['model']+RunTimeInputs['Filename']
+out_target  = os.path.join(directory,out_name)
+iom.pickle_dict(directory, out_name+"_IC", RunTimeInputs) # save initialisation data for continued simulations
+RunTimeInputs, xc, yc , rec_p = mod.Iterate(RunTimeInputs, out_target, live_plot)
+toc = time.perf_counter()
+# Results['simulation_time']=toc-tic    
 
-    if saving:
-        vm.ReportResults(out_target, RunTimeInputs, cmap_name)
-        name = os.path.join(directory,'video')
-        vm.export_video(RunTimeInputs, odpi=set_dpi, vid_FPS = set_FPS, number_of_frames=export_nframes, cmap_name='jet')
-    if compare:
-        eResults = iom.load_MDL_pickle(RunTimeInputs['Directory'])
-        if 'sort' in list(RunTimeInputs.keys()):
-            eResults['X'] = eResults['X'][RunTimeInputs['sort']]
-            eResults['Y'] = eResults['Y'][RunTimeInputs['sort']]
-            eResults['drying_times'] = eResults['drying_times'][RunTimeInputs['sort']]
-            eResults['rdx'] = eResults['rdx'][RunTimeInputs['sort']]
+if saving:
+    vm.ReportResults(out_target, RunTimeInputs, cmap_name)
+    name = os.path.join(directory,'video')
+    vm.export_video(RunTimeInputs, odpi=set_dpi, vid_FPS = set_FPS, number_of_frames=export_nframes, cmap_name='jet')
+if compare:
+    eResults = iom.load_MDL_pickle(RunTimeInputs['Directory'])
+    if 'sort' in list(RunTimeInputs.keys()):
+        eResults['X'] = eResults['X'][RunTimeInputs['sort']]
+        eResults['Y'] = eResults['Y'][RunTimeInputs['sort']]
+        eResults['drying_times'] = eResults['drying_times'][RunTimeInputs['sort']]
+        eResults['rdx'] = eResults['rdx'][RunTimeInputs['sort']]
 
-        vm.Compare2Data(eResults, cmap_name) # fix for new data handling
-        # print("bias angle  = ",Results['bias_angle'])
-        # print("bias gradient  = ",Results['bias_grad'])
-        
+    vm.Compare2Data(eResults, cmap_name) # fix for new data handling
+    # print("bias angle  = ",Results['bias_angle'])
+    # print("bias gradient  = ",Results['bias_grad'])
     
+
 # =============================================================================
