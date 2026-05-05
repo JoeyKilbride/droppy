@@ -264,7 +264,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets
             
             if RunTimeInputs['model'] == 'Mean field':
-                dVdt[alive] = deepcopy(dVdt_iso)
+                dVdt[alive] = deepcopy(dVdt_iso*1000)
+
 
             dVdt        = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
             t_i     = np.vstack([t_i, t]) # record time steps
