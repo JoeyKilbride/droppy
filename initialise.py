@@ -51,6 +51,7 @@ def create_initial_conditions(directory):
     RunTimeInputs['rand']=c.rand               # Randomise evaporation rates 
     RunTimeInputs['p_rate']=c.p_rate           # rate at which droplets are printed (s-1), 0 is instantaneous
     RunTimeInputs['t_terminate']=c.t_terminate # max simulation time (s)
+    RunTimeInputs['n_terminate']=c.n_terminate # stop simulation droplet number (s)
     RunTimeInputs['n_mols'] = c.n_mols         # mols of solute in liquid
     RunTimeInputs['i'] = c.i                   # Van hoff factor
 
@@ -93,14 +94,14 @@ tic = time.perf_counter()
 out_name = RunTimeInputs['model']+RunTimeInputs['Filename']
 out_target  = os.path.join(directory,out_name)
 iom.pickle_dict(directory, out_name+"_IC", RunTimeInputs) # save initialisation data for continued simulations
-RunTimeInputs, xc, yc , rec_p = mod.Iterate(RunTimeInputs, out_target, live_plot)
+RunTimeInputs, xc, yc , rec_p, iteration_num = mod.Iterate(RunTimeInputs, out_target, live_plot)
 toc = time.perf_counter()
 # Results['simulation_time']=toc-tic    
 
 if saving:
-    vm.ReportResults(out_target, RunTimeInputs, cmap_name)
+    vm.ReportResults(out_target, RunTimeInputs, cmap_name, iteration_num)
     name = os.path.join(directory,'video')
-    vm.export_video(RunTimeInputs, odpi=set_dpi, vid_FPS = set_FPS, number_of_frames=export_nframes, cmap_name='jet')
+    vm.export_video(RunTimeInputs, iteration_num, odpi=set_dpi, vid_FPS = set_FPS, number_of_frames=export_nframes, cmap_name='jet')
 if compare:
     eResults = iom.load_MDL_pickle(RunTimeInputs['Directory'])
     if 'sort' in list(RunTimeInputs.keys()):

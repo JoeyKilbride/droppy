@@ -152,7 +152,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             chunks=(buffer_size,1),
             compression="gzip"
         )
-        Vgrp = f.require_group("Volumes")
+        Vgrp = f.require_group("Volume")
         dset2 = Vgrp.create_dataset(
             volume_segment,
             shape=(0,N),             # another dataset
@@ -218,20 +218,23 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             compression="gzip"
         )
     ############################################
+    iteration_number = 0
     terminate=False
-    while len(Vi[alive])>0: 
+    while len(Vi[alive])>RunTimeInputs['n_terminate']: 
         print("___________________Remaining Evaporating____________________")
         any_evaporated = np.any(Vi[alive] <= ZERO)
         any_unprinted = False #len(t_print[alive]<=t)>len(printed)
         touching, any_touching = pm.TouchingCircles(xc[alive],yc[alive],r0[alive],theta[alive])
         keep_incrementing = not(any([any_evaporated, any_unprinted, any_touching]))
         while keep_incrementing:
+            iteration_number+=1
             if t>RunTimeInputs['t_terminate']:
                 print("_________________")
                 print("termination time flagged")
                 terminate=True
                 print("_________________")
                 break
+
             else:
                 terminate=False
             if (RunTimeInputs['mode'] == "CCR"):
@@ -470,14 +473,33 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     print(f"Loop ran for: {tloop:2f} mins")
 
     # Save end values
-    V_t=np.vstack([V_t, np.zeros(len(Vi))])# add zero volumes to array
-    t_i = np.vstack([t_i, t]) # add final times to array
     Vi=np.where(Vi<0,0,Vi)
+    V_t=np.vstack([V_t, Vi])# add zero volumes to array
+    t_i = np.vstack([t_i, t]) # add final times to array
+    
+    if (RunTimeInputs['mode'] == "CCR"):
+        theta = pm.GetCAfromV(Vi/1000, r0, ZERO)  
+    elif (RunTimeInputs['mode'] == "CCA"):
+        Vi=np.where(Vi<0,0,Vi)
+        r0 = pm.GetBase(theta, Vi/1000)
+
+    if (RunTimeInputs['mode'] == "CAH"):         
+        cca_droplets1 = np.logical_and(theta[alive]>=theta_a[alive], dVdt[alive]>0)
+        cca_droplets2 = np.logical_and(theta[alive]<=theta_r[alive], dVdt[alive]<0)
+        cca_droplets  = np.logical_or(cca_droplets1, cca_droplets2)
+        mask = np.zeros_like(alive, dtype=bool)
+        mask[alive] = cca_droplets
+        r0[mask] = pm.GetBase(theta[alive][cca_droplets], Vi[alive][cca_droplets]/1000)
+        r0[np.logical_not(alive)] = 0.
+        ccr_droplets = np.logical_not(cca_droplets)
+        mask[alive] = ccr_droplets # a mask is used here as two booleans create a copy and dont update theta
+        theta[mask] = pm.GetCAfromV(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], ZERO)
+        theta[np.logical_not(alive)] = 0.
+
     # r0 = pm.GetBase(theta, Vi/1000)
     r0_t    = np.vstack([r0_t, r0])
     xc_t    = np.vstack([xc_t, xc])
     yc_t    = np.vstack([yc_t, yc])
-    # theta = pm.GetCAfromV(Vi/1000, r0, ZERO) 
     theta_t= np.vstack([theta_t, theta*180/np.pi])
     if (RunTimeInputs['mode'] == "CCR"):
         # update final plot
@@ -511,4 +533,4 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     print(f"Droplets took ,{t/60:.2f} mins to evaporate")
     print("_____________________________________________")
     
-    return RunTimeInputs, xcentres, ycentres, print_record
+    return RunTimeInputs, xcentres, ycentres, print_record, iteration_number

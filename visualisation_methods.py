@@ -89,7 +89,7 @@ def get_cmap(n, name='prism'):
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
     
-def ReportResults(filename, RunTimeInputs, cmap_name):
+def ReportResults(filename, RunTimeInputs, cmap_name, iteration_num):
     """Plots graphics from the evaportion data."""
     plt.close('all')
     fig_V = plt.figure()
@@ -108,7 +108,7 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     yc = np.mean(RunTimeInputs["ycentres"])
     ND = len(RunTimeInputs["xcentres"])
     
-    Results = iom.load_datasets_h5py(filename, ["Time", "Volume", "Theta", "Radius", "dVdt"], 1000)
+    Results = iom.load_datasets_h5py(filename, ["Time", "Volume", "Theta", "Radius", "dVdt"], int(np.ceil(iteration_num/100)))
     t_evap = np.empty([ND])
     for pdx in range(ND):
         name = "D"+str(pdx)
@@ -151,8 +151,8 @@ def ReportResults(filename, RunTimeInputs, cmap_name):
     plt.show(block=False)
     return
 
-def export_video(RunTimeInputs ,odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
-    DTM_data = iom.load_datasets_h5py(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['model']+RunTimeInputs['Filename']), ["t_print", "Theta", "Radius", "Time", "xc", "yc"], 1000)
+def export_video(RunTimeInputs, iteration_num, odpi=200, vid_FPS=25, number_of_frames=10, cmap_name='jet'):
+    DTM_data = iom.load_datasets_h5py(os.path.join(RunTimeInputs['Directory'],RunTimeInputs['model']+RunTimeInputs['Filename']), ["Theta", "Radius", "Time", "xc", "yc"], int(np.ceil(iteration_num/100)))
     unique_drying_times = np.unique(DTM_data['Time'])
 
     max_time = np.max(unique_drying_times)

@@ -61,6 +61,7 @@ bg=None # gradient of linear bias
 bp=None # point of last droplet to evaporate
 rand=0 # leave in most cases
 t_terminate=np.inf # forced termination time
+n_terminate=-1 # forced termination when number of droplets is less than or equal to this.
 p_rate=0 # print rate in droplets/ second - 0 means all iniitalised at t=0.
 
 
