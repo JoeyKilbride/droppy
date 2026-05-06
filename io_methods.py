@@ -220,7 +220,10 @@ def load_datasets_h5py(file, dataset_names, resolution=1):
             if name in f:
                 chunks = []
                 if isinstance(f[name], h5py.Dataset):
-                    chunks.append(f[name][res_var])
+                    print("shape: ", f[name][res_var].ravel().shape)
+                    chunks.append(f[name][res_var].ravel())
+                    print("shape end: ", f[name][-1].shape)
+                    chunks.append(f[name][-1])
                 else:
                     subnames = list(f[name].keys())
                     k=0
@@ -236,6 +239,12 @@ def load_datasets_h5py(file, dataset_names, resolution=1):
                         pad[:,:n_droplets]=dset
                         chunks.append(pad)
                         k+=n_time_global
+
+                        if subname==subnames[-1]:
+                            dset=f[name][subname][-1]
+                            pad = np.full((1, max_droplets),np.nan)
+                            pad[0,:n_droplets]=dset
+                            chunks.append(pad)
 
                 data[name] = np.concatenate(chunks, axis=0)
             else:
