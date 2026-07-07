@@ -33,6 +33,7 @@ def create_initial_conditions(directory):
     if c.dt == "adaptive":
         RunTimeInputs['error_tol'] = c.error_tol # error tolerance for adaptive time stepping
         RunTimeInputs['dt_min'] = c.dt_min # minimum timestep for adaptive stepping 
+        RunTimeInputs['dt_max'] = c.dt_max # maximum timestep for adaptive stepping 
     RunTimeInputs['CA']=c.CA                 # as 1D np array (rads)
     RunTimeInputs['xcentres']=c.CX           # as 1D np array ()
     RunTimeInputs['ycentres']=c.CY           # as 1D np array

@@ -53,6 +53,7 @@ dt = 1             # timestep size (s), or "adaptive" will choose timestep based
 if dt == "adaptive":
     error_tol = 0.00001 # error tolerance for adaptive time stepping (fraction of volume evaporated in a timestep)
     dt_min=1e-6 # seconds - minimum timestep for adaptive stepping, should be nonzero 
+    dt_max=1 # seconds - maximum timestep for adaptive stepping, should be nonzero 
 # t=0                   # initial time (s) - should alway be zero (probably should be removed)
 model="Masoud"           # which model to simulate with "Wray", "Masoud or "Mean field"
 nterms = 1  # number of terms in the Masoud expansion

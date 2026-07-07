@@ -281,8 +281,11 @@ def Iterate(RunTimeInputs, output_target, plot=False):
 
             if adaptive_timestep:
                 dt = RunTimeInputs['error_tol']/abs(max((dVdt[alive])/Vi[alive]))
-                if dt<=RunTimeInputs['dt_min']:
+                if dt<RunTimeInputs['dt_min']:
                     dt = RunTimeInputs['dt_min']
+                elif dt>RunTimeInputs['dt_max']:
+                    dt = RunTimeInputs['dt_max']
+
                 print("timestep: ", dt, " (s)")
             # =============================================================
             # Update time, volume and radius arrays for the next iteration
