@@ -22,7 +22,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     print("_____________________________________________")
 
     
-    buffer_size = 10 # make this configurable later
+    buffer_size = RunTimeInputs['buffer_size']
 
     # Ready the troops
     xcentres={}

@@ -49,7 +49,8 @@ export_nframes=30
 
 #_______Simulation parameters_____________________________________________
 filter_touching = False # filters out droplets which are touching (potentially not working!)
-dt = 1             # timestep size (s), or "adaptive" will choose timestep based on an error tolerance 
+dt = 1             # timestep size (s), or "adaptive" will choose timestep based on an error tolerance
+buffer_size = 100 # number of timesteps before data is dumped from memory.
 if dt == "adaptive":
     error_tol = 0.00001 # error tolerance for adaptive time stepping (fraction of volume evaporated in a timestep)
     dt_min=1e-6 # seconds - minimum timestep for adaptive stepping, should be nonzero 
