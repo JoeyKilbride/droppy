@@ -106,7 +106,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         if RunTimeInputs['mode'] == "CAH":
             vmax1 = [np.min(theta_r)*(180/np.pi),np.max(theta_a)*(180/np.pi)]
             cmtype1='rainbow'
-        dVdt_new = pm.Masoud_fast(xc, yc, r0, dVdt_iso, theta)
+        dVdt_new = pm.Masoud(xc, yc, r0, dVdt_iso, theta, RunTimeInputs['n_nearest'], RunTimeInputs['within_d'])
         vmax2 = [min(dVdt_new),max(dVdt_new)]
         if vmax2[0]>0: # all condensing
             vmax2[0]=0
@@ -135,7 +135,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         b_ang, mb, bias = pm.add_bias(RunTimeInputs['bias_point'][0]/1000, RunTimeInputs['bias_point'][1]/1000, xcentres[alive], ycentres[alive], RunTimeInputs['bias_grad'])
     
     if RunTimeInputs['model'] == "Wray":
-         dVdt_new=pm.WrayFabricant(xc[alive], yc[alive], r0[alive], dVdt_iso[alive])
+         dVdt_new=pm.WrayFabricant(xc[alive], yc[alive], r0[alive], dVdt_iso[alive], RunTimeInputs['n_nearest'])
     
     ############################################
     segment_index = 0
@@ -253,7 +253,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             
             if RunTimeInputs['model'] == "Masoud":
                 tic = time.perf_counter()
-                dVdt_new = pm.Masoud_fast(xc[alive], yc[alive], r0[alive], dVdt_iso, theta[alive])
+                dVdt_new = pm.Masoud(xc[alive], yc[alive], r0[alive], dVdt_iso, theta[alive], RunTimeInputs['n_nearest'], RunTimeInputs['within_d'])
                 toc = time.perf_counter()
                 print(f"Matrix inversion time: {toc-tic:.3f}s")
                 #dVdt_new=dVdt_new+(dVdt_new) #*rand_evap[alive]
@@ -261,7 +261,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             
             if RunTimeInputs['model'] == 'Wray':  
                 tic = time.perf_counter()
-                dVdt_new=pm.WrayFabricant(xc[alive], yc[alive], r0[alive], dVdt_iso)
+                dVdt_new=pm.WrayFabricant(xc[alive], yc[alive], r0[alive], dVdt_iso, RunTimeInputs['n_nearest'], RunTimeInputs['within_d'])
                 toc = time.perf_counter()
                 print(f"Matrix inversion time: {toc-tic:.3f}s")
                 dVdt[alive] = deepcopy(dVdt_new*bias[alive]) # update new evaporation rates for living droplets

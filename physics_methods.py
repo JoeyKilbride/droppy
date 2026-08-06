@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 import scipy
 import warnings
 from copy import deepcopy
-
+from scipy.sparse import coo_matrix
+from scipy.sparse.linalg import spsolve
 
 def normalise(arr, by='max'):
     """by: max, min or mean"""
@@ -370,7 +371,7 @@ def GetRoC(r_base,h):
 
 # Droplet evaporation functions *********************************
 
-def Masoud_fast(x, y, a, dVdt_iso, CA):
+def Masoud_fast(x, y, a, dVdt_iso, CA, N='all', dist='none'):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
@@ -407,7 +408,7 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
     x_diff = x[:,None]-x[None,:]
     y_diff = y[:,None]-y[None,:]
     r = np.sqrt(x_diff**2+y_diff**2)
-    np.fill_diagonal(r,1)
+    np.fill_diagonal(r,1) # to avoid divide by zero errors
 
     a_b = a[:,None]
     A_b = A[:,None]
@@ -415,42 +416,67 @@ def Masoud_fast(x, y, a, dVdt_iso, CA):
 
     X = 4*(a_b/r)*A_b + (A_b-4*B_b)*((a_b**3*(r**2-3*z**2))/(r**5))      
     np.fill_diagonal(X,1)
-    
-    lu, piv = scipy.linalg.lu_factor(X)
-    dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso)*1000
+    if dist != 'none':
+        np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
+        rows, cols = np.where(r < dist)
+        values = X[rows, cols]
+        M, k = X.shape
+        X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
+        dVdt = spsolve(X_sparse, dVdt_iso) # perform a sparse solve
 
-    return dVdt
+    elif N!='all':
+        np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
+        idx = np.argpartition(r, N, axis=1)[:, :N+1] # find N closest neighbours +1 for diag
+        M, k = idx.shape
+        rows = np.repeat(np.arange(M), k) # get positions of value in matrix
+        cols = idx.ravel()
+        values = X[np.arange(M)[:, None], idx].ravel() # find values in X
+        X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
+        dVdt = spsolve(X_sparse, dVdt_iso) # perform a sparse solve
 
-def WrayFabricant(x,y,a,dVdt_iso):
+    else:
+        lu, piv = scipy.linalg.lu_factor(X)
+        dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso) # if not sparse this algoryithm is better
+
+    return dVdt*1000
+
+def WrayFabricant(x, y, a, dVdt_iso, N='all', dist='none'):
     """Calculating Wray et al. 2020 theoretical
     evaporation rates for multiple droplets.
     Returns droplet evaporation rates in L/s."""
-    # x =array(x,dtype=float) # force numpy array
-    # y =array(y,dtype=float)
-    # a =array(a,dtype=float)
+ 
+    x_diff = x[:,None]-x[None,:]
+    y_diff = y[:,None]-y[None,:]
+    r = np.sqrt(x_diff**2+y_diff**2)
+    np.fill_diagonal(r,1)
 
-    N = np.size(x)
-    r=np.empty([N,N])           # set-up empty array for inter-droplet distance
-    X=np.empty([N,N])           # set-up empty array for Flux calculation
-    #print("x=",x)
-    for idx, i in enumerate(x):
-       
-        for jdx, j in enumerate(x):
-           
-            #print((a[jdx]/a[idx])**2)
-            r[idx,jdx]=np.sqrt((i-j)**2+(y[idx]-y[jdx])**2)
-            if idx == jdx :     # the diagonal terms should be one
-                X[idx,jdx] = 1
-            else:
-               
-                X[idx,jdx] = (2/np.pi) * np.arcsin(a[idx]/r[idx,jdx])   # equation (3.2) from the paper - poly-volume droplets
-                    #X[idx,jdx] =  (2/np.pi) * np.arcsin(a[idx]/r[idx,jdx])
-    #Y = linalg.inv(X)        # inverse of the matrix...next step, calculate the flux
-    #dVdt = dot(Y,dVdt_iso)*1000 # L/s: dot prod sums up all contributions - lab book 03/09/21
-    #dVdt=scipy.linalg.solve(X, dVdt_iso)*1000  # 1.62X  faster than above # 3.6X faster
-    dVdt=scipy.linalg.lu_solve(scipy.linalg.lu_factor(X),dVdt_iso)*1000
+    a_b = a[:,None]
+    X = (2/np.pi) * np.arcsin(a_b/r)   # equation (3.2) from the paper - po
 
-    return dVdt # return theoretical flux values
+    np.fill_diagonal(X,1)
+    if dist != 'none':
+        np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
+        rows, cols = np.where(r < dist)
+        values = X[rows, cols]
+        M, k = X.shape
+        X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
+        dVdt = spsolve(X_sparse, dVdt_iso) # perform a sparse solve
+    
+    elif N!='all':
+        np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
+        idx = np.argpartition(r, N, axis=1)[:, :N+1] # find N closest neighbours +1 for diag
+        M, k = idx.shape
+        rows = np.repeat(np.arange(M), k) # get positions of value in matrix
+        cols = idx.ravel()
+        values = X[np.arange(M)[:, None], idx].ravel() # find values in X
+
+        X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
+        dVdt = spsolve(X_sparse, dVdt_iso) # perform a sparse solve
+    else:
+        lu, piv = scipy.linalg.lu_factor(X)
+        dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso) # if not sparse this algoryithm is better
+
+    return dVdt*1000 # return theoretical flux values
 
 
 def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T, n=0, i=1):

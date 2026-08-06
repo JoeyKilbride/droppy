@@ -57,6 +57,8 @@ if dt == "adaptive":
     dt_max=1 # seconds - maximum timestep for adaptive stepping, should be nonzero 
 # t=0                   # initial time (s) - should alway be zero (probably should be removed)
 model="Masoud"           # which model to simulate with "Wray", "Masoud or "Mean field"
+n_nearest = 'all' # n nearest neighbours to include in matrix, 'all' includes every droplet
+within_d = 'none' # distance (m) around droplet to include in matrix, 'none' means all droplets. n_nearest must='all' when != 'none'.
 nterms = 1  # number of terms in the Masoud expansion
 TL=0   # delay before updating the evaporation rates after a droplet has evaporated (s) - zero is normal for the model 
 bg=None # gradient of linear bias 

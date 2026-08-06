@@ -43,6 +43,8 @@ def create_initial_conditions(directory):
     RunTimeInputs['Ambient_T']=c.Ambient_T     # Degrees C
     RunTimeInputs['t']=0                     # initial time (s)
     RunTimeInputs['model']=c.model             # which model to simulate with "Wray" or "Masoud"
+    RunTimeInputs['n_nearest'] = c.n_nearest    # how many nearest neighbouring droplets to include in matrix
+    RunTimeInputs['within_d'] = c.within_d     # distance within which to include neighbouring droplets in matrix
     RunTimeInputs['Directory']=directory       # where to save data (absolute, no trailing \)
     RunTimeInputs['Filename']=filename         # what to call data (no exts)
     RunTimeInputs['Transient_Length']=c.TL     # delay before updating evap rate (s)
