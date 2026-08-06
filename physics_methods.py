@@ -371,7 +371,7 @@ def GetRoC(r_base,h):
 
 # Droplet evaporation functions *********************************
 
-def Masoud_fast(x, y, a, dVdt_iso, CA, N='all', dist='none'):
+def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none'):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
