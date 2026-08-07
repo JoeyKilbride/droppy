@@ -426,6 +426,8 @@ def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none'):
 
     elif N!='all':
         np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
+        if N >= len(x):
+            N = len(x)-1
         idx = np.argpartition(r, N, axis=1)[:, :N+1] # find N closest neighbours +1 for diag
         M, k = idx.shape
         rows = np.repeat(np.arange(M), k) # get positions of value in matrix
@@ -464,6 +466,8 @@ def WrayFabricant(x, y, a, dVdt_iso, N='all', dist='none'):
     
     elif N!='all':
         np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
+        if N >= len(x):
+            N = len(x)-1
         idx = np.argpartition(r, N, axis=1)[:, :N+1] # find N closest neighbours +1 for diag
         M, k = idx.shape
         rows = np.repeat(np.arange(M), k) # get positions of value in matrix
