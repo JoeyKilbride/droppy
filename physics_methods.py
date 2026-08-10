@@ -371,7 +371,7 @@ def GetRoC(r_base,h):
 
 # Droplet evaporation functions *********************************
 
-def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none'):
+def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none', solver='dense', nterms=2):
     """Calculating Masoud et al. 2020 theoretical evaporation
     rates for multiple droplets.
     Returns droplet evaporation rates in L/s. """
@@ -413,8 +413,10 @@ def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none'):
     a_b = a[:,None]
     A_b = A[:,None]
     B_b = B[:,None]
-
-    X = 4*(a_b/r)*A_b + (A_b-4*B_b)*((a_b**3*(r**2-3*z**2))/(r**5))      
+    if nterms==1:
+        X = 4*(a_b/r)*A_b
+    else:
+        X = 4*(a_b/r)*A_b + (A_b-4*B_b)*((a_b**3*(r**2-3*z**2))/(r**5))
     np.fill_diagonal(X,1)
     if dist != 'none':
         np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
@@ -422,7 +424,7 @@ def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none'):
         values = X[rows, cols]
         M, k = X.shape
         X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
-        dVdt = spsolve(X_sparse, dVdt_iso) # perform a sparse solve
+        dVdt = solve_matrix(X_sparse, dVdt_iso, solver=solver) # solve
 
     elif N!='all':
         np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
@@ -434,15 +436,23 @@ def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none'):
         cols = idx.ravel()
         values = X[np.arange(M)[:, None], idx].ravel() # find values in X
         X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
-        dVdt = spsolve(X_sparse, dVdt_iso) # perform a sparse solve
+        dVdt = solve_matrix(X_sparse, dVdt_iso, solver=solver) # solve
 
     else:
-        lu, piv = scipy.linalg.lu_factor(X)
-        dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso) # if not sparse this algoryithm is better
+        dVdt = solve_matrix(X, dVdt_iso, solver=solver) # solve
 
     return dVdt*1000
 
-def WrayFabricant(x, y, a, dVdt_iso, N='all', dist='none'):
+def solve_matrix(X, dVdt_iso, solver='dense'):
+    """Solves the matrix equation X * dVdt = dVdt_iso for dVdt."""
+    if solver == 'dense':
+        lu, piv = scipy.linalg.lu_factor(X)
+        dVdt = scipy.linalg.lu_solve((lu, piv), dVdt_iso)
+    elif solver == 'sparse':
+        dVdt = spsolve(X, dVdt_iso) # perform a sparse solve
+    return dVdt
+
+def WrayFabricant(x, y, a, dVdt_iso, N='all', dist='none', solver='dense'):
     """Calculating Wray et al. 2020 theoretical
     evaporation rates for multiple droplets.
     Returns droplet evaporation rates in L/s."""
@@ -462,7 +472,7 @@ def WrayFabricant(x, y, a, dVdt_iso, N='all', dist='none'):
         values = X[rows, cols]
         M, k = X.shape
         X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
-        dVdt = spsolve(X_sparse, dVdt_iso) # perform a sparse solve
+        dVdt = solve_matrix(X_sparse, dVdt_iso, solver=solver) # solve
     
     elif N!='all':
         np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
@@ -475,10 +485,9 @@ def WrayFabricant(x, y, a, dVdt_iso, N='all', dist='none'):
         values = X[np.arange(M)[:, None], idx].ravel() # find values in X
 
         X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
-        dVdt = spsolve(X_sparse, dVdt_iso) # perform a sparse solve
+        dVdt = solve_matrix(X_sparse, dVdt_iso, solver=solver) # solve
     else:
-        lu, piv = scipy.linalg.lu_factor(X)
-        dVdt=scipy.linalg.lu_solve((lu,piv),dVdt_iso) # if not sparse this algoryithm is better
+        dVdt = solve_matrix(X, dVdt_iso, solver=solver) # solve
 
     return dVdt*1000 # return theoretical flux values
 
