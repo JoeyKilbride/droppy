@@ -292,6 +292,14 @@ def GetVolumeCA(CA, r_base):
     V=(np.pi/3)*((r_base/np.sin(CA))**3) *(2+np.cos(CA))*((1-np.cos(CA))**2)
     V=V*1000 # m3 -> L
     return V
+
+def GetVolumeCAr(CA, r):
+    """Calculates volume of a spherical cap from Contact angle (rads)
+    and base radius (m). Returns V in L."""
+    V=(np.pi/3)*(r**3) *(2+np.cos(CA))*((1-np.cos(CA))**2)
+    V=V*1000 # m3 -> L
+    return V
+
 def GetBase(CA, V):
     """Calculates Rb (m) of a spherical cap from Contact angle (rads)
     and volume (m^3). Returns Rb in m."""
@@ -499,9 +507,9 @@ def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T, n=0, i=1):
 
     if np.any(CA==0):
         r = np.where(CA==0,Rb,Rb/np.sin(CA))
-        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, r, i)
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, r, CA, i)
     else:
-        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, Rb/np.sin(CA), i)
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, Rb/np.sin(CA), CA, i)
 
     dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
     f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
@@ -526,12 +534,13 @@ def gas_density(ABCs, mms, phis, T):
     rho = (((101325+np.sum(-1*(ps*phis)))*0.02897)+np.sum(phis*ps*mms))/(8.314*(T+273.15))
     return rho
 
-def kohler(n,Mm,sigma,T,rho,radius, i=1):
+def kohler(n,Mm,sigma,T,rho,radius, CA, i=1):
     """Kohler theory calculating the vapour pressures variation due to:
     The Kelvin effect and The Raoult effect."""
     Di = radius*2 # diameter (m)
+    V = GetVolumeCAr(CA, radius)/1000 # convert to m3
     kelvin = (4*Mm*sigma)/(8.314*(T+273.15)*rho*Di)
-    Raoult = (6*n*i*Mm)/(np.pi*rho*Di**3)
+    Raoult = (n*i*Mm)/(rho*V)
     p_eq = np.exp(kelvin-Raoult)
     return p_eq
 
