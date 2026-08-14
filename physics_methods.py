@@ -12,6 +12,7 @@ import warnings
 from copy import deepcopy
 from scipy.sparse import coo_matrix
 from scipy.sparse.linalg import spsolve
+from scipy.sparse.linalg import lgmres
 
 def normalise(arr, by='max'):
     """by: max, min or mean"""
@@ -458,6 +459,10 @@ def solve_matrix(X, dVdt_iso, solver='dense'):
         dVdt = scipy.linalg.lu_solve((lu, piv), dVdt_iso)
     elif solver == 'sparse':
         dVdt = spsolve(X, dVdt_iso) # perform a sparse solve
+    elif solver == 'lgmres':
+        dVdt, exitCode = scipy.sparse.linalg.lgmres(X, dVdt_iso)
+        if exitCode != 0:
+            raise ValueError(f"lgmres did not converge, exit code: {exitCode}")
     return dVdt
 
 def WrayFabricant(x, y, a, dVdt_iso, N='all', dist='none', solver='dense'):
