@@ -57,6 +57,7 @@ def create_initial_conditions(directory):
     RunTimeInputs['p_rate']=c.p_rate           # rate at which droplets are printed (s-1), 0 is instantaneous
     RunTimeInputs['t_terminate']=c.t_terminate # max simulation time (s)
     RunTimeInputs['n_terminate']=c.n_terminate # stop simulation droplet number (s)
+    RunTimeInputs['wall_clock_terminate']=c.wall_clock_terminate # stop simulation wall clock time (mins)
     RunTimeInputs['n_mols'] = c.n_mols         # mols of solute in liquid
     RunTimeInputs['i'] = c.i                   # Van hoff factor
 

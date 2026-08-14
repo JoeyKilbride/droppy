@@ -231,12 +231,19 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             if t>RunTimeInputs['t_terminate']:
                 print("_________________")
                 print("termination time flagged")
+                print("simulation exceeded")
                 terminate=True
                 print("_________________")
                 break
-
-            else:
-                terminate=False
+            wall_clock_length=timeit.default_timer()
+            if wall_clock_length-loop_start>RunTimeInputs['wall_clock_terminate']*60:
+                print("_________________")
+                print("termination flagged")
+                print("Wall clock run time exceeded")
+                terminate=True
+                print("_________________")
+                break
+            
             if (RunTimeInputs['mode'] == "CCR"):
                 theta = pm.GetCAfromV(Vi/1000, r0, ZERO)  
             elif (RunTimeInputs['mode'] == "CCA"):
@@ -466,14 +473,13 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         print("_____________________________________________")
         print("Number of droplets has changed, updating matrix ...")
         print("\tNo. of evaporating droplets left: ", len(Vi[has_V]))
-        print("\tNo. of printed droplets: ", len(Vi[printed]))
         print("_____________________________________________")
         if terminate:
             break
     
     loop_end=timeit.default_timer()
     tloop=(loop_end-loop_start)/60 # mins
-    print(f"Loop ran for: {tloop:2f} mins")
+    print(f"Wall clock simulation time: {tloop:2f} mins")
 
     # Save end values
     Vi=np.where(Vi<0,0,Vi)
@@ -533,7 +539,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     iom.write_hdf5_directly(t_print, 't_print', output_target)
     print("_____________________________________________")
     print("Residual Volume error = ", residual)
-    print(f"Droplets took ,{t/60:.2f} mins to evaporate")
+    print(f"Evaporated for: ,{t/60:.2f} mins to evaporate")
     print("_____________________________________________")
     
     return RunTimeInputs, xcentres, ycentres, print_record, iteration_number

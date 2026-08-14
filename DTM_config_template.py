@@ -67,6 +67,7 @@ bp=None # point of last droplet to evaporate
 rand=0 # leave in most cases
 t_terminate=np.inf # forced termination time
 n_terminate=-1 # forced termination when number of droplets is less than or equal to this.
+wall_clock_terminate=np.inf # forced termination when wall clock time exceeds this (mins)
 p_rate=0 # print rate in droplets/ second - 0 means all iniitalised at t=0.
 
 
