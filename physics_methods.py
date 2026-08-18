@@ -434,7 +434,9 @@ def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none', solver='dense', nterms=2
         M, k = X.shape
         X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
         dVdt = solve_matrix(X_sparse, dVdt_iso, solver=solver) # solve
-
+        sparsity = X_sparse.nnz / (X_sparse.shape[0] * X_sparse.shape[1])
+        print("sparsity of matrix: ", sparsity)
+       
     elif N!='all':
         np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
         if N >= len(x):
@@ -446,9 +448,12 @@ def Masoud(x, y, a, dVdt_iso, CA, N='all', dist='none', solver='dense', nterms=2
         values = X[np.arange(M)[:, None], idx].ravel() # find values in X
         X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
         dVdt = solve_matrix(X_sparse, dVdt_iso, solver=solver) # solve
+        sparsity = X_sparse.nnz / (X_sparse.shape[0] * X_sparse.shape[1])
+        print("sparsity of matrix: ", sparsity)
 
     else:
         dVdt = solve_matrix(X, dVdt_iso, solver=solver) # solve
+
 
     return dVdt*1000
 
