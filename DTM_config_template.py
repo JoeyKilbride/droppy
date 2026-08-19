@@ -4,8 +4,6 @@
 
 import sys
 sys.path.insert(0, r'DIR OF THE CODE')
-#sys.path.insert(0, r'DIRECTORY TO /MDL_repo')
-#import MDL_processing as MDL
 
 ## Uncomment below to use functions from other files to load droplet data
 # import physics_methods as pm
@@ -66,7 +64,7 @@ bg=None # gradient of linear bias
 bp=None # point of last droplet to evaporate
 rand=0 # leave in most cases
 t_terminate=np.inf # forced termination time
-n_terminate=-1 # forced termination when number of droplets is less than or equal to this.
+n_terminate=0 # forced termination when number of droplets is less than or equal to this.
 wall_clock_terminate=np.inf # forced termination when wall clock time exceeds this (mins)
 p_rate=0 # print rate in droplets/ second - 0 means all iniitalised at t=0.
 
