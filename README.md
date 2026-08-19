@@ -50,7 +50,7 @@ To install the project clone (or download) the repo.
 
 ### Requirements
 
-Most modern version of python 3 should work. There are quite a few required python packages which can be installed with `pip install -r requirements.txt`. The packages are as follows:
+Python version 11 and 12 should work. There are quite a few required python packages which can be installed with `pip install -r requirements.txt`. The packages are as follows:
 - numpy
 - matplotlib
 - scipy
@@ -69,7 +69,8 @@ Most modern version of python 3 should work. There are quite a few required pyth
 `cd DTM_repo`
 
 ### (Optional) Create and activate a virtual environment
-python -m venv env
+brew install python@3.11
+python3.11 -m venv env
 source env/bin/activate  # On Windows: env\Scripts\activate
 
 ### Install dependencies
