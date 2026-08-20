@@ -29,7 +29,7 @@ for droplet in range(data['Radius'].shape[1]):
         r0 = data["Radius"][t_i,droplet] # metres
         radii = r0[~np.isnan(r0)] # metres
         theta = data["Theta"][t_i,droplet] [~np.isnan(r0)] # degrees
-        plt.scatter(t_i, radii, color=colours[droplet])
+        plt.scatter(data['Time'][t_i], radii, color=colours[droplet])
 
 plt.xlabel("Time (s)")
 plt.ylabel("Droplet radius (m)")
