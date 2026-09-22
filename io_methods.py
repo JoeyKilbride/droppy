@@ -303,6 +303,7 @@ def load_MDTM_pickle_unsequential(directory, prefix=None):
     else: 
         prefix1 = prefix + ".pkl" 
     try: 
+        print("path: ",os.path.join(directory,prefix1))
         target = glob.glob(os.path.join(directory,prefix1))[0]
         if os.path.getsize(target)>0: 
             with open(target, 'rb') as handle: 
@@ -319,7 +320,7 @@ def load_MDTM_pickle_unsequential(directory, prefix=None):
     return input_dict
 
 
-def read_imageJ_coords(directory, filename):
+def read_imageJ_coords(directory, filename, rname="Minor"):
     """Reads ImageJ (FIJI) .txt data."""
     target = os.path.join(directory,filename+".txt")
     print("reading target file: ", target)
@@ -334,6 +335,9 @@ def read_imageJ_coords(directory, filename):
     data = np.genfromtxt(target, dtype=types, skip_header=0, names=True, usecols = columns)
     CX = data['X']
     CY = data['Y']
-    r  = data['Minor']/2
+    if rname=="MinMaj":
+        r = (data['Major']+data['Minor'])/4
+    else:
+        r  = data[rname]/2
     print("1. Droplet centres retrieved")
     return data, CX, CY, r
