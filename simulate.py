@@ -74,7 +74,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
 
     has_V = Vi>0
     print_record={}
-    printed = t_print==t # should be at least 1 droplet
+    printed = t_print<=t # should be at least 1 droplet
     print_record[0]=printed
     alive = np.logical_and(printed, has_V)
 
