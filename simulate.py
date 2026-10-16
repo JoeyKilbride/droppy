@@ -38,7 +38,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         theta_a    = RunTimeInputs['CA']
         theta_r    = RunTimeInputs['CA']
 
-    t        = 0
+    t        = RunTimeInputs['t0']
     Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
     if dt == "adaptive":

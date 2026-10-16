@@ -53,7 +53,7 @@ if dt == "adaptive":
     error_tol = 0.00001 # error tolerance for adaptive time stepping (fraction of volume evaporated in a timestep)
     dt_min=1e-6 # seconds - minimum timestep for adaptive stepping, should be nonzero 
     dt_max=1 # seconds - maximum timestep for adaptive stepping, should be nonzero 
-# t=0                   # initial time (s) - should alway be zero (probably should be removed)
+t=0                   # initial time (s) - zero for new simulation, data_prev['Time'][-1] for continued simulation
 model="Masoud"           # which model to simulate with "Wray", "Masoud or "Mean field"
 n_nearest = 'all' # n nearest neighbours to include in matrix, 'all' includes every droplet
 within_d = 'none' # distance (m) around droplet to include in matrix, 'none' means all droplets. n_nearest must='all' when != 'none'.
