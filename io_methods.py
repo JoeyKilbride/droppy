@@ -211,18 +211,18 @@ def load_datasets_h5py(file, dataset_names, resolution=1):
         Keys are dataset names, values are NumPy arrays with the dataset contents.
     """
     data = {}
-    print("file: ",file)
+    # print("file: ",file)
 
     with h5py.File(file+".h5", "r") as f:
         for name in dataset_names:
-            print(f"Loading dataset '{name}'...")
+            # print(f"Loading dataset '{name}'...")
             res_var = slice(None, None, resolution)
             if name in f:
                 chunks = []
                 if isinstance(f[name], h5py.Dataset):
-                    print("shape: ", f[name][res_var].ravel().shape)
+                    # print("shape: ", f[name][res_var].ravel().shape)
                     chunks.append(f[name][res_var].ravel())
-                    print("shape end: ", f[name][-1].shape)
+                    # print("shape end: ", f[name][-1].shape)
                     chunks.append(f[name][-1])
                 else:
                     subnames = list(f[name].keys())
@@ -248,7 +248,10 @@ def load_datasets_h5py(file, dataset_names, resolution=1):
                 data[name] = np.concatenate(chunks, axis=0)
             else:
                 raise KeyError(f"Dataset '{name}' not found in file")
-        del dset
+        try:
+            del dset
+        except:
+            pass
     return data
 
 
