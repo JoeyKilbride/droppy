@@ -41,7 +41,7 @@ def create_initial_conditions(directory):
     RunTimeInputs['DNum']=len(c.CX)            # total number of droplets in array
     RunTimeInputs['Ambient_RHs']=c.Ambient_RHs # Fraction [0-1]
     RunTimeInputs['Ambient_T']=c.Ambient_T     # Degrees C
-    RunTimeInputs['t']=0                     # initial time (s)
+    RunTimeInputs['t0']=c.t0                     # initial time (s)
     RunTimeInputs['model']=c.model             # which model to simulate with "Wray" or "Masoud"
     RunTimeInputs['n_nearest'] = c.n_nearest    # how many nearest neighbouring droplets to include in matrix
     RunTimeInputs['within_d'] = c.within_d     # distance within which to include neighbouring droplets in matrix
