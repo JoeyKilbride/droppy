@@ -228,7 +228,6 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         touching, any_touching = pm.TouchingCircles(xc[alive],yc[alive],r0[alive],theta[alive])
         keep_incrementing = not(any([any_evaporated, any_unprinted, any_touching]))
         while keep_incrementing:
-            iteration_number+=1
             if t>RunTimeInputs['t_terminate']:
                 print("_________________")
                 print("termination time flagged")
@@ -279,13 +278,14 @@ def Iterate(RunTimeInputs, output_target, plot=False):
 
 
             dVdt        = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
-            t_i     = np.vstack([t_i, t]) # record time steps
-            V_t     = np.vstack([V_t, Vi]) # add new volumes to array
-            xc_t    = np.vstack([xc_t, xc])
-            yc_t    = np.vstack([yc_t, yc])
-            theta_t = np.vstack([theta_t, theta*180/np.pi])
-            r0_t    = np.vstack([r0_t, r0])
-            dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
+            if iteration_number % RunTimeInputs['write_every'] == 0:
+                t_i     = np.vstack([t_i, t]) # record time steps
+                V_t     = np.vstack([V_t, Vi]) # add new volumes to array
+                xc_t    = np.vstack([xc_t, xc])
+                yc_t    = np.vstack([yc_t, yc])
+                theta_t = np.vstack([theta_t, theta*180/np.pi])
+                r0_t    = np.vstack([r0_t, r0])
+                dVdt_t  = np.vstack([dVdt_t, dVdt])# add new volumes to array
 
             if adaptive_timestep:
                 dt = RunTimeInputs['error_tol']/abs(max((dVdt[alive])/Vi[alive]))
@@ -326,7 +326,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                                                 RunTimeInputs['Ambient_T'] +273.15, 
                                                 RunTimeInputs['rho_liquid'], 
                                                 np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
-            if len(t_i) == buffer_size:
+            if np.shape(V_t)[1] == buffer_size:
                 print("writing data - buffer full")
                 with h5py.File(output_target+".h5", "a") as f:
                     iom.stream_hdf5_collection(f, t_i, "Time")
@@ -369,7 +369,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             any_unprinted = np.sum(t_print<=t)>np.sum(printed)
             touching, any_touching = pm.TouchingCircles(xc[alive],yc[alive],r0[alive],theta[alive])
             keep_incrementing = not(any([any_evaporated, any_unprinted, any_touching]))
-        
+            iteration_number+=1
         if any_touching:
             # save anything remaining in the buffer
             with h5py.File(output_target+".h5", "a") as f:

@@ -31,6 +31,7 @@ def create_initial_conditions(directory):
     RunTimeInputs['Rb']=c.Rb                 # Droplet base radius (metres)
     RunTimeInputs['dt']= c.dt                # single number (s)
     RunTimeInputs['buffer_size']=c.buffer_size # number of timesteps before data is dumped
+    RunTimeInputs['write_every']=c.write_every # number of timesteps between writing data to file. 1 means every timestep, 10 means every 10 timesteps. 
     if c.dt == "adaptive":
         RunTimeInputs['error_tol'] = c.error_tol # error tolerance for adaptive time stepping
         RunTimeInputs['dt_min'] = c.dt_min # minimum timestep for adaptive stepping 

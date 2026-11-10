@@ -184,6 +184,7 @@ def export_video(RunTimeInputs, iteration_num, odpi=200, vid_FPS=25, number_of_f
     for tdx, t in enumerate(times):
         print("________")
         print("writing frame: ", tdx+1, "/"+str(number_of_frames))
+        print("times:", DTM_data['Time'].ravel())
         t_i = np.argwhere(t>=DTM_data['Time'].ravel())[-1][0]
 
         if RunTimeInputs['mode']=="CCR":

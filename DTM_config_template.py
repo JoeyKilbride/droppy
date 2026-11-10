@@ -48,12 +48,13 @@ export_nframes=30
 #_______Simulation parameters_____________________________________________
 filter_touching = False # filters out droplets which are touching (potentially not working!)
 dt = 1             # timestep size (s), or "adaptive" will choose timestep based on an error tolerance
+write_every = 1 # number of timesteps between writing data to file. 1 means every timestep, 10 means every 10 timesteps.
 buffer_size = 100 # number of timesteps before data is dumped from memory.
 if dt == "adaptive":
     error_tol = 0.00001 # error tolerance for adaptive time stepping (fraction of volume evaporated in a timestep)
     dt_min=1e-6 # seconds - minimum timestep for adaptive stepping, should be nonzero 
     dt_max=1 # seconds - maximum timestep for adaptive stepping, should be nonzero 
-t=0                   # initial time (s) - zero for new simulation, data_prev['Time'][-1] for continued simulation
+t0=0                   # initial time (s) - zero for new simulation, data_prev['Time'][-1] for continued simulation
 model="Masoud"           # which model to simulate with "Wray", "Masoud or "Mean field"
 n_nearest = 'all' # n nearest neighbours to include in matrix, 'all' includes every droplet
 within_d = 'none' # distance (m) around droplet to include in matrix, 'none' means all droplets. n_nearest must='all' when != 'none'.
