@@ -34,6 +34,8 @@ The project allows you to 'simulate' the evaporation of multiple droplets on sur
 - ✅ The numerical evolution of time can be Euler of a 4th Order Runge Kutta method (see other branches). 
 - ✅ Timestep can be adaptive.
 - ✅ Simulation data is saved in chunks using h5py, to avoid OOM.
+- ✅ Data ouput can be configured every N iteractions to reduce size of files.
+- ✅ Simulations can be continued from the end or midpoint of a previous run.
 ---
 
 ## ⚙️ Installation
