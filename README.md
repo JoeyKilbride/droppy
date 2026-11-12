@@ -42,7 +42,7 @@ The project allows you to 'simulate' the evaporation of multiple droplets on sur
 To install the project clone (or download) the repo. 
 
 ### Using the terminal
-1. Open the terminal and cd to the preferred installation directory. ie. `cd C:\User\documents` (windows), `cd /user/name/documents` (Mac).
+1. Open the terminal and cd to the preferred installation directory. ie. `cd /user/name/documents` (Mac).
 2. Then clone with: `git clone https://github.com/JoeyKilbride/droppy.git droppy_repo`.
 
 ### Using Zip 
@@ -68,26 +68,33 @@ Python version 11 and 12 should work. There are quite a few required python pack
 ## Configuration
 
 ### Navigate into the project
-`cd DTM_repo`
+`cd droppy_repo`
 
 ### (Optional) Create and activate a virtual environment
-brew install python@3.11
-python3.11 -m venv env
-source env/bin/activate  # On Windows: env\Scripts\activate
+If you are using Mac:
+`brew install python@3.11`
+`python3.11 -m venv env`
+`source env/bin/activate`
+If you are using Windows, using Windows Subsystem for Linux (WSL) is recommended and running the following commands:
+`sudo apt update`
+`sudo apt install software-properties-common -y`
+`sudo add-apt-repository ppa:deadsnakes/ppa`
+`sudo apt install python3.11 python3.11-venv python3.11-dev -y`
+`python3.11 -m venv env`
+`source env/bin/activate`
 
 ### Install dependencies
-pip install -r requirements.txt
-
+`pip install -r requirements.txt`
 
 ## How to use
-1. create a folder and copy 'DTM_config_template.py' into it and rename -> 'DTM_config.py'.
+1. create a folder and copy `DTM_config_template.py` into it and rename -> `DTM_config.py`.
    This file contains all the parameters which must be specified to run the code. It contains the specifics about where each droplet is positioned, each droplets size, liquid and gas           constants etc.
-   - Change sys.path.insert(0, r'DIR OF THE CODE') -> sys.path.insert(0, r'/user/name/documents/droppy_repo'), or wherever you saved DTM_repo in installation.
+   - Change `sys.path.insert(0, r'DIR OF THE CODE')` -> `sys.path.insert(0, r'/user/name/documents/droppy_repo')`, or wherever you saved DTM_repo in installation.
    - Change prefix to a decription of the simulation ie. "example"
    A Full decription of each other variable is given as comments in the file. Should run as is, for testing. 
 
-3. Use python to run 'initialise.py' in your prefered way.
-4. Enter when prompted the directory you created in step 1 (containing the 'DTM_config.py').
+3. Use python to run `initialise.py` in your prefered way.
+4. Enter when prompted the directory you created in step 1 (containing the `DTM_config.py`).
 5. If everything has been set correctly it will start simulating the evaporation of the specified droplets.
    By default this is a 3 droplet line.
 
