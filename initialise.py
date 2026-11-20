@@ -83,10 +83,17 @@ def create_initial_conditions(directory):
         RunTimeInputs['sort']=c.sort
     RunTimeInputs['Antoine_coeffs'] = c.ABCs
     RunTimeInputs['box_volume'] = c.box_volume
+    if c.model == "Sandwich":
+        RunTimeInputs['h'] = c.h
+        RunTimeInputs['Rs'] = c.Rs
+        RunTimeInputs['rc'] = c.rc
     RunTimeInputs['rho_liquid'] = c.rho_liquid
     RunTimeInputs['molar_masses'] = c.molar_masses
     RunTimeInputs['surface_tension'] = c.surface_tension
-    RunTimeInputs['Vi'] = pm.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
+    if c.model == "Sandwich":
+        RunTimeInputs['Vi'] = pm.GetVolume_Sandwich(RunTimeInputs['CA'],RunTimeInputs['Rb'],RunTimeInputs['h'])
+    else:
+        RunTimeInputs['Vi'] = pm.GetVolumeCA(RunTimeInputs['CA'],RunTimeInputs['Rb'])
     print("Total volume= ", np.sum(RunTimeInputs['Vi']), " (L)")
     
     return RunTimeInputs, c.saving, c.live_plot, c.compare, c.cmap_name, c.dpi, c.vid_FPS, c.export_nframes

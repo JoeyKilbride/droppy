@@ -41,6 +41,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     t        = RunTimeInputs['t0']
     Vi       = RunTimeInputs['Vi']
     dt       = RunTimeInputs['dt'] 
+
     if dt == "adaptive":
         adaptive_timestep = True
     else: 
@@ -95,7 +96,12 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         dVdt_iso    = pm.getIsolated(csat ,RH, r0, 0, RunTimeInputs['rho_liquid'], 
                                         RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
                                         RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                        RunTimeInputs['n_mols'], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
+                                        RunTimeInputs['n_mols'], RunTimeInputs['i'])
+    elif RunTimeInputs['model'] == "Sandwich":
+        dVdt_iso = pm.sandwichIsolated(csat ,RH, r0, theta, RunTimeInputs['h'], RunTimeInputs['Rs'], RunTimeInputs['rc'], RunTimeInputs['rho_liquid'],
+                                        RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                        RunTimeInputs['n_mols'], RunTimeInputs['i'])
     else:
         dVdt_iso    = pm.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
                                                 RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
@@ -135,8 +141,8 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     else:
         b_ang, mb, bias = pm.add_bias(RunTimeInputs['bias_point'][0]/1000, RunTimeInputs['bias_point'][1]/1000, xcentres[alive], ycentres[alive], RunTimeInputs['bias_grad'])
     
-    if RunTimeInputs['model'] == "Wray":
-         dVdt_new=pm.WrayFabricant(xc[alive], yc[alive], r0[alive], dVdt_iso[alive], RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'])
+    # if RunTimeInputs['model'] == "Wray":
+    #      dVdt_new=pm.WrayFabricant(xc[alive], yc[alive], r0[alive], dVdt_iso[alive], RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'])
     
     ############################################
     segment_index = 0
@@ -221,6 +227,7 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     ############################################
     iteration_number = 0
     terminate=False
+    print("_____________r0:", r0)
     while len(Vi[alive])>RunTimeInputs['n_terminate']: 
         print("___________________Remaining Evaporating____________________")
         any_evaporated = np.any(Vi[alive] <= ZERO)
@@ -245,19 +252,34 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 break
             
             if (RunTimeInputs['mode'] == "CCR"):
-                theta = pm.GetCAfromV(Vi/1000, r0, ZERO)  
+                if RunTimeInputs['model'] == "Sandwich":
+                    theta = pm.GetCAfromV_Sandwich(Vi/1000, r0, RunTimeInputs['h'])
+                else:
+                    theta = pm.GetCAfromV(Vi/1000, r0, ZERO)
+                    
             elif (RunTimeInputs['mode'] == "CCA"):
                 Vi=np.where(Vi<0,0,Vi)
-                r0 = pm.GetBase(theta, Vi/1000)
+                if RunTimeInputs['model'] == "Sandwich":
+                    print(theta)
+                    print(Vi)
+                    r0 = pm.GetBase_Sandwich(theta, Vi/1000, RunTimeInputs['h'])
+                else:
+                    r0 = pm.GetBase(theta, Vi/1000)
                 
             print("Average radius: ", np.mean(r0[alive]))
             Vprev       = deepcopy(Vi)
-
-            dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
-                                        RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                        nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
-            
+            if RunTimeInputs['model'] == "Sandwich":
+                dVdt_iso = pm.sandwichIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['h'], RunTimeInputs['Rs'], RunTimeInputs['rc'][alive], RunTimeInputs['rho_liquid'],
+                                                RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                                RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                                nmols[alive], RunTimeInputs['i']) # Incropera pp.209
+                
+            else:
+                dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
+                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                                            nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
+                
             if RunTimeInputs['model'] == "Masoud":
                 tic = time.perf_counter()
                 dVdt_new = pm.Masoud(xc[alive], yc[alive], r0[alive], dVdt_iso, theta[alive], RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'], RunTimeInputs['nterms'])
@@ -276,6 +298,10 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             if RunTimeInputs['model'] == 'Mean field':
                 dVdt[alive] = deepcopy(dVdt_iso*1000)
 
+            if RunTimeInputs['model'] == 'Sandwich':
+                dVdt_new = pm.Sandwich(xc[alive], yc[alive], r0[alive], RunTimeInputs['Rs'], dVdt_iso, RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'])
+                dVdt[alive] = deepcopy(dVdt_new) # update new evaporation rates for living droplets
+                
 
             dVdt        = np.where(Vi>=ZERO,dVdt,0) # dead droplets evaporation rates set to 0
             if iteration_number % RunTimeInputs['write_every'] == 0:
@@ -299,18 +325,24 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             # Update time, volume and radius arrays for the next iteration
             t        = math.fsum([t,dt])
             Vi       = Vprev+(dVdt*dt)
+            Vi=np.where(Vi<0,0,Vi)
             # =============================================================
-            if (RunTimeInputs['mode'] == "CAH"):
-                Vi=np.where(Vi<0,0,Vi)            
+            if (RunTimeInputs['mode'] == "CAH"):          
                 cca_droplets1 = np.logical_and(theta[alive]>=theta_a[alive], dVdt[alive]>0)
                 cca_droplets2 = np.logical_and(theta[alive]<=theta_r[alive], dVdt[alive]<0)
                 cca_droplets  = np.logical_or(cca_droplets1, cca_droplets2)
                 mask = np.zeros_like(alive, dtype=bool)
                 mask[alive] = cca_droplets
-                r0[mask] = pm.GetBase(theta[alive][cca_droplets], Vi[alive][cca_droplets]/1000)
+                if RunTimeInputs['model'] == "Sandwich":
+                    r0[mask] = pm.GetBase_Sandwich(theta[alive][cca_droplets], Vi[alive][cca_droplets]/1000, RunTimeInputs['h'], ZERO)
+                else:
+                    r0[mask] = pm.GetBase(theta[alive][cca_droplets], Vi[alive][cca_droplets]/1000)
                 ccr_droplets = np.logical_not(cca_droplets)
                 mask[alive] = ccr_droplets # a mask is used here as two booleans create a copy and dont update theta
-                theta[mask] = pm.GetCAfromV(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], ZERO)
+                if RunTimeInputs['model'] == "Sandwich":
+                    theta[mask] = pm.GetCAfromV_Sandwich(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], RunTimeInputs['h'])
+                else:
+                    theta[mask] = pm.GetCAfromV(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], ZERO)
 
             # print(f"dV/V: {max((dVdt[alive]*dt)/Vi[alive])*100:.3f}%")
             print(f"Volume remaining: {100*(np.sum(Vi)/np.sum(RunTimeInputs['Vi'])):.5f}%")
@@ -318,14 +350,14 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             if RunTimeInputs['box_volume']!=np.inf:
                 print("RH = ","{:.5f}".format(RH*100),"%")
                 RH_t    = np.vstack([RH_t, RH]) 
-                RH          = pm.dynamic_humidity(RunTimeInputs['box_volume'],
-                                                RunTimeInputs['molar_masses'][0],
-                                                RunTimeInputs['Antoine_coeffs'][0][0],
-                                                RunTimeInputs['Antoine_coeffs'][0][1],
-                                                RunTimeInputs['Antoine_coeffs'][0][2],
-                                                RunTimeInputs['Ambient_T'] +273.15, 
-                                                RunTimeInputs['rho_liquid'], 
-                                                np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
+                RH = pm.dynamic_humidity(RunTimeInputs['box_volume'],
+                            RunTimeInputs['molar_masses'][0],
+                            RunTimeInputs['Antoine_coeffs'][0][0],
+                            RunTimeInputs['Antoine_coeffs'][0][1],
+                            RunTimeInputs['Antoine_coeffs'][0][2],
+                            RunTimeInputs['Ambient_T'] +273.15, 
+                            RunTimeInputs['rho_liquid'], 
+                            np.sum(-1*(dVdt*dt))) + RH_t[-1][0]
             if np.shape(V_t)[1] == buffer_size:
                 print("writing data - buffer full")
                 with h5py.File(output_target+".h5", "a") as f:
@@ -434,12 +466,18 @@ def Iterate(RunTimeInputs, output_target, plot=False):
             if (RunTimeInputs['mode'] == "CCR"):
                 theta = np.ones(len(Vi))*np.pi/4 # This is a bodge for future sorting out!!!
                                                  # as CCR is a bit unphysical in a coelescence context.
-                r0 = pm.GetBase(theta, Vi/1000)
+                if RunTimeInputs['model'] == "Sandwich":
+                    r0 = pm.GetBase_Sandwich(theta, Vi/1000, RunTimeInputs['h'], ZERO)
+                else:
+                    r0 = pm.GetBase(theta, Vi/1000)
                 # theta = pm.GetCAfromV(xcentres[t]/1000, r0, ZERO)  
             elif (RunTimeInputs['mode'] == "CCA"):
                 # theta = deepcopy(theta_a) #np.ones(len(Vi))*theta[0]
                 Vi=np.where(Vi<0,0,Vi)
-                r0 = pm.GetBase(theta, Vi/1000)
+                if RunTimeInputs['model'] == "Sandwich":
+                    r0 = pm.GetBase_Sandwich(theta, Vi/1000, RunTimeInputs['h'], ZERO)
+                else:
+                    r0 = pm.GetBase(theta, Vi/1000)
             elif (RunTimeInputs['mode'] == "CAH"):
                 r0 = pm.GetBase(theta, Vi/1000)
           
@@ -491,7 +529,10 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         theta = pm.GetCAfromV(Vi/1000, r0, ZERO)  
     elif (RunTimeInputs['mode'] == "CCA"):
         Vi=np.where(Vi<0,0,Vi)
-        r0 = pm.GetBase(theta, Vi/1000)
+        if RunTimeInputs['model'] == "Sandwich":
+            r0 = pm.GetBase_Sandwich(theta, Vi/1000, RunTimeInputs['h'])
+        else:
+            r0 = pm.GetBase(theta, Vi/1000)
 
     if (RunTimeInputs['mode'] == "CAH"):         
         cca_droplets1 = np.logical_and(theta[alive]>=theta_a[alive], dVdt[alive]>0)
@@ -499,11 +540,17 @@ def Iterate(RunTimeInputs, output_target, plot=False):
         cca_droplets  = np.logical_or(cca_droplets1, cca_droplets2)
         mask = np.zeros_like(alive, dtype=bool)
         mask[alive] = cca_droplets
-        r0[mask] = pm.GetBase(theta[alive][cca_droplets], Vi[alive][cca_droplets]/1000)
+        if RunTimeInputs['model'] == "Sandwich":
+            r0[mask] = pm.GetBase_Sandwich(theta[alive][cca_droplets], Vi[alive][cca_droplets]/1000, RunTimeInputs['h'])
+        else:
+            r0[mask] = pm.GetBase(theta[alive][cca_droplets], Vi[alive][cca_droplets]/1000, RunTimeInputs['h'])
         r0[np.logical_not(alive)] = 0.
         ccr_droplets = np.logical_not(cca_droplets)
         mask[alive] = ccr_droplets # a mask is used here as two booleans create a copy and dont update theta
-        theta[mask] = pm.GetCAfromV(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], ZERO)
+        if RunTimeInputs['model'] == "Sandwich":
+            theta[mask] = pm.GetCAfromV_Sandwich(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], RunTimeInputs['h'])
+        else:
+            theta[mask] = pm.GetCAfromV(Vi[alive][ccr_droplets]/1000, r0[alive][ccr_droplets], ZERO)
         theta[np.logical_not(alive)] = 0.
 
     # r0 = pm.GetBase(theta, Vi/1000)

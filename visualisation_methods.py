@@ -184,7 +184,6 @@ def export_video(RunTimeInputs, iteration_num, odpi=200, vid_FPS=25, number_of_f
     for tdx, t in enumerate(times):
         print("________")
         print("writing frame: ", tdx+1, "/"+str(number_of_frames))
-        print("times:", DTM_data['Time'].ravel())
         t_i = np.argwhere(t>=DTM_data['Time'].ravel())[-1][0]
 
         if RunTimeInputs['mode']=="CCR":
@@ -197,11 +196,15 @@ def export_video(RunTimeInputs, iteration_num, odpi=200, vid_FPS=25, number_of_f
             ax.clear()
             r0 = DTM_data["Radius"][t_i,:]#[printed]
             radii = r0[~np.isnan(r0)]*1e6
+            print(DTM_data["Theta"][t_i,:])
             theta = DTM_data["Theta"][t_i,:] [~np.isnan(r0)]
-
+            print(theta)
             xc = DTM_data["xc"][t_i,:][~np.isnan(DTM_data["xc"][t_i,:])]
+            print(xc)
             yc = DTM_data["yc"][t_i,:][~np.isnan(DTM_data["yc"][t_i,:])]
+            print(yc)
             centres=list(zip(list(xc*1e6),list(yc*1e6)))
+            print(centres)
             CreateDroplets(ax, fig, cmap_name, centres, radii, theta, vmax[0], vmax[1], True, False, lims=lims)
             ax.set_aspect('equal', adjustable='box')
             title.set_text(f"t = {t:.2f}")

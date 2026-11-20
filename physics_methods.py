@@ -348,6 +348,120 @@ def GetCAfromV(V, Rb, zero):
                 CA[i] = abs(np.arccos(rts[-1]))
     return CA
 
+def GetCAfromV_Sandwich(V, Rb, h):
+    # Implementation for sandwich model
+    V = np.asarray(V, dtype=float)
+    Rb = np.asarray(Rb, dtype=float)    
+    alive = np.logical_and(Rb>0, V>0)
+    if alive.sum() == 0:
+            return np.zeros_like(V)  # Return an array of zeros if no valid droplets
+    if V.shape!=():
+        CA = np.zeros(len(Rb))
+        CA[alive] = (np.pi/2) + 2*np.arctan(2*(V[alive]-np.pi*Rb[alive]**2*h)/(np.pi*Rb[alive]*h**2))
+    else:
+        CA = (np.pi/2) + 2*np.arctan(2*(V-np.pi*Rb**2*h)/(np.pi*Rb*h**2))
+    return CA
+
+def GetVolume_Sandwich(CA, Rb, h):
+    """Calculates volume of a sandwich droplet from Contact angle (rads)
+    and base radius (m). Returns V in L."""
+    V = np.pi*Rb**2*h - np.pi*Rb*h**2*(1-np.sin(CA))/(2*np.cos(CA))
+    V = V*1000 # m3 -> L
+    return V
+
+def GetBase_Sandwich(CA, V, h):
+    return np.sqrt(V/(np.pi*h))
+# def GetBase_Sandwich(CA, V, h, ZERO=1e-12):
+#     """
+#     Calculates wetted radius Rb. 
+#     GUARANTEED to return 0.0 (not NaN) if V<=0 or CA<=0.
+#     """
+    
+#     # 1. Convert to arrays
+#     CA = np.asarray(CA, dtype=float)
+#     V = np.asarray(V, dtype=float)
+#     h = np.asarray(h, dtype=float)
+    
+#     # 2. Broadcast shapes
+#     try:
+#         final_shape = np.broadcast_shapes(CA.shape, V.shape, h.shape)
+#     except ValueError:
+#         raise ValueError("Incompatible shapes")
+    
+#     # Broadcast to ensure alignment
+#     CA = np.broadcast_to(CA, final_shape)
+#     V = np.broadcast_to(V, final_shape)
+#     h = np.broadcast_to(h, final_shape)
+    
+#     # 3. Initialize Output with ZEROS (Not NaN)
+#     Rb = np.zeros(final_shape, dtype=float)
+    
+#     # 4. Identify Valid Inputs
+#     # If CA <= 0 OR V <= 0, mask is False -> Result stays 0.0
+#     alive = np.logical_and(CA > 0, V > 0)
+    
+#     if not np.any(alive):
+#         # Optimization: If nothing is valid, return the zero array immediately
+#         # This prevents any math errors or NaN generation
+#         return Rb.item() if final_shape == () else Rb
+
+#     # 5. Extract Valid Data
+#     ca_v = CA[alive]
+#     v_v = V[alive]
+#     h_v = h[alive]
+    
+#     # 6. Calculate Coefficients
+#     theta_rad = np.radians(ca_v)
+#     cos_t = np.cos(theta_rad)
+#     sin_t = np.sin(theta_rad)
+    
+#     # Safe geometric factor
+#     geo = np.where(np.abs(cos_t) > 1e-9, (1 - sin_t) / cos_t, 0.0)
+    
+#     A = np.pi * h_v
+#     B = -0.5 * np.pi * (h_v**2) * geo
+#     C = -v_v
+    
+#     # 7. Solve Quadratic
+#     # We vectorize the root finding to avoid apply_along_axis overhead/issues
+#     # Discriminant D = B^2 - 4AC
+#     D = B**2 - 4*A*C
+    
+#     # Initialize solution array for valid items
+#     sol_v = np.zeros_like(A)
+    
+#     # Mask for real roots (D >= 0)
+#     real_roots_mask = D >= 0
+    
+#     if np.any(real_roots_mask):
+#         # Calculate roots only where discriminant is non-negative
+#         sqrt_D = np.sqrt(D[real_roots_mask])
+#         A_r = A[real_roots_mask]
+#         B_r = B[real_roots_mask]
+        
+#         # Two possible roots
+#         r1 = (-B_r + sqrt_D) / (2 * A_r)
+#         r2 = (-B_r - sqrt_D) / (2 * A_r)
+        
+#         # Select the positive root
+#         # Logic: If r1 > 0 take r1, else if r2 > 0 take r2, else 0
+#         # Since C = -V (negative) and A = pi*h (positive), C/A is negative.
+#         # Product of roots r1*r2 = C/A < 0. This means one root is always positive, one negative.
+#         # So we just take the max(r1, r2) or the one > 0.
+#         roots_pos = np.where(r1 > 0, r1, r2)
+        
+#         sol_v[real_roots_mask] = roots_pos
+    
+#     # 8. Assign back to main array
+#     Rb[alive] = sol_v
+    
+#     # 9. Return scalar if input was scalar
+#     if final_shape == ():
+#         return float(Rb) # Ensure native python float, not 0-d array
+#     else:
+#         return Rb
+
+
 def GetHeight(Rb, V):
     """Calculates the height (output) of a spherical cap droplet
         from the volume (input 2) and base radius (input 1).""" 
@@ -509,9 +623,47 @@ def WrayFabricant(x, y, a, dVdt_iso, N='all', dist='none', solver='dense'):
 
     return dVdt*1000 # return theoretical flux values
 
+def Sandwich(x, y, a, Rs, dVdt_iso, N='all', dist='none', solver='dense'):
+    """Calculating modified Wray et al. 2020 theoretical
+    evaporation rates for multiple sandwich droplets.
+    Returns droplet evaporation rates in L/s."""
+    
+    x_diff = x[:,None]-x[None,:]
+    y_diff = y[:,None]-y[None,:]
+    r = np.sqrt(x_diff**2+y_diff**2)
+    np.fill_diagonal(r,1)
+
+    a_b = a[:,None]
+    X = -(2/np.pi) * a_b/np.log(r/Rs)  
+
+    np.fill_diagonal(X,1)
+    if dist != 'none':
+        np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
+        rows, cols = np.where(r < dist)
+        values = X[rows, cols]
+        M, k = X.shape
+        X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
+        dVdt = solve_matrix(X_sparse, dVdt_iso, solver=solver) # solve
+    
+    elif N!='all':
+        np.fill_diagonal(r,0) # set diag=0 so it is always included and ones on diag stay
+        if N >= len(x):
+            N = len(x)-1
+        idx = np.argpartition(r, N, axis=1)[:, :N+1] # find N closest neighbours +1 for diag
+        M, k = idx.shape
+        rows = np.repeat(np.arange(M), k) # get positions of value in matrix
+        cols = idx.ravel()
+        values = X[np.arange(M)[:, None], idx].ravel() # find values in X
+
+        X_sparse = coo_matrix((values, (rows, cols)), shape=(M, M)).tocsr() # create sparse matrix
+        dVdt = solve_matrix(X_sparse, dVdt_iso, solver=solver) # solve
+    else:
+        dVdt = solve_matrix(X, dVdt_iso, solver=solver) # solve
+
+    return dVdt*1000 # return theoretical flux values
 
 def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T, n=0, i=1):
-    """Returns the evaporation rate for an isolated droplet at a 
+    """Returns the evaporation rate for an isolated droplet on a substrate at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
 
@@ -527,6 +679,24 @@ def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T, n=0, i=1):
     dmdt=dmdt_env*dmdt_geom 
     dVdt_isolated=-(dmdt/rho_liquid) # m3/s - Convention is to have -dVdt as evaporation
     
+    return dVdt_isolated
+
+def sandwichIsolated(csat, phi, Rb, CA, h, Rs, rc, rho_liquid, D, Mm, sigma, T, n=0, i=1):
+    """Returns the evaporation rate for an isolated droplet between two circular plates at a 
+    temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
+    liquid density (rho_liquid)."""
+
+    if np.any(CA==0):
+        r = np.where(CA==0,Rb,Rb/np.sin(CA))
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, r, CA, i)
+    else:
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, Rb/np.sin(CA), CA, i)
+
+    dmdt_env = D*csat*(phi_sat-phi) # Calculate envionmental component of flux.
+    
+    dmdt_geom = 2*np.pi*h/(np.log((Rb**2+Rs**2-rc**2) / (2*Rb*Rs))) # Geometric factor for sandwich droplet
+    dmdt=dmdt_env*dmdt_geom 
+    dVdt_isolated=-(dmdt/rho_liquid) # m3/s - Convention is to have -dVdt as evaporation
     return dVdt_isolated
 
 def Psat(A,B,C,T):

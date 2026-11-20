@@ -15,12 +15,13 @@ prefix    = "PREFIX FOR OUTPUT FILES"
 directory = r'OPERATION DIRECTORY'
 
 # __________Defining Droplets (default - 3 droplet line) ______
-#CX,CY,CA,Rb = dpy.depositSquare(N,s,ca,Rb)
-#CX,CY,CA,Rb = depositLine(N,s,ca,Rb)
+model="Masoud"           # which model to simulate with "Wray", "Masoud, "Mean field" or "Sandwich"
 CX = np.array([-3,0,3])/1000 # X coordinates of the droplets (m)
 CY = np.array([0,0,0]) # Y coordinates of the droplets (m)
 Rb = np.ones(len(CX))/1000 # Base contact radius of the droplets (m)
 CA = np.ones(len(CX))*np.pi/2 # Initial contact angle of the droplets (rads)
+if model == "Sandwich":
+    rc = np.array([0.00,0.00,0.00])/1000 # radial distance from disk centre (m)
 mode = "CCA" # constant contact area ("CCA"), constant contact radius ("CCR"), contact angle hysteresis ("CAH")
 if mode == "CAH":
     CA_a = np.ones(len(CX))*np.pi/2 # Advancing contact angle of the droplets (rads)
@@ -55,10 +56,12 @@ if dt == "adaptive":
     dt_min=1e-6 # seconds - minimum timestep for adaptive stepping, should be nonzero 
     dt_max=1 # seconds - maximum timestep for adaptive stepping, should be nonzero 
 t0=0                   # initial time (s) - zero for new simulation, data_prev['Time'][-1] for continued simulation
-model="Masoud"           # which model to simulate with "Wray", "Masoud or "Mean field"
+if model=="Sandwich":
+    h = 0.001 # height of the sandwich cell (m)
+    Rs = 0.01 # radius of the sandwich cell (m)
 n_nearest = 'all' # n nearest neighbours to include in matrix, 'all' includes every droplet
 within_d = 'none' # distance (m) around droplet to include in matrix, 'none' means all droplets. n_nearest must='all' when != 'none'.
-matrix_solver = "sparse" # "sparse" or "dense" - sparse for n_nearest/within_d set, dense for small droplet numbers.
+matrix_solver = "dense" # "sparse" or "dense" - sparse for n_nearest/within_d set, dense for small droplet numbers.
 nterms = 1  # number of terms in the Masoud expansion
 TL=0   # delay before updating the evaporation rates after a droplet has evaporated (s) - zero is normal for the model 
 bg=None # gradient of linear bias 
