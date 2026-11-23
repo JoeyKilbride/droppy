@@ -354,7 +354,7 @@ def GetCAfromV_Sandwich(V, Rb, h):
     Rb = np.asarray(Rb, dtype=float)    
     alive = np.logical_and(Rb>0, V>0)
     if alive.sum() == 0:
-            return np.zeros_like(V)  # Return an array of zeros if no valid droplets
+        return np.zeros_like(V)  # Return an array of zeros if no valid droplets
     if V.shape!=():
         CA = np.zeros(len(Rb))
         CA[alive] = (np.pi/2) + 2*np.arctan(2*(V[alive]-np.pi*Rb[alive]**2*h)/(np.pi*Rb[alive]*h**2))
@@ -369,97 +369,97 @@ def GetVolume_Sandwich(CA, Rb, h):
     V = V*1000 # m3 -> L
     return V
 
-def GetBase_Sandwich(CA, V, h):
-    return np.sqrt(V/(np.pi*h))
-# def GetBase_Sandwich(CA, V, h, ZERO=1e-12):
-#     """
-#     Calculates wetted radius Rb. 
-#     GUARANTEED to return 0.0 (not NaN) if V<=0 or CA<=0.
-#     """
+# def GetBase_Sandwich(CA, V, h):
+#     return np.sqrt(V/(np.pi*h))
+def GetBase_Sandwich(CA, V, h, ZERO=1e-12):
+    """
+    Calculates wetted radius Rb. 
+    GUARANTEED to return 0.0 (not NaN) if V<=0 or CA<=0.
+    """
     
-#     # 1. Convert to arrays
-#     CA = np.asarray(CA, dtype=float)
-#     V = np.asarray(V, dtype=float)
-#     h = np.asarray(h, dtype=float)
+    # 1. Convert to arrays
+    CA = np.asarray(CA, dtype=float)
+    V = np.asarray(V, dtype=float)
+    h = np.asarray(h, dtype=float)
     
-#     # 2. Broadcast shapes
-#     try:
-#         final_shape = np.broadcast_shapes(CA.shape, V.shape, h.shape)
-#     except ValueError:
-#         raise ValueError("Incompatible shapes")
+    # 2. Broadcast shapes
+    try:
+        final_shape = np.broadcast_shapes(CA.shape, V.shape, h.shape)
+    except ValueError:
+        raise ValueError("Incompatible shapes")
     
-#     # Broadcast to ensure alignment
-#     CA = np.broadcast_to(CA, final_shape)
-#     V = np.broadcast_to(V, final_shape)
-#     h = np.broadcast_to(h, final_shape)
+    # Broadcast to ensure alignment
+    CA = np.broadcast_to(CA, final_shape)
+    V = np.broadcast_to(V, final_shape)
+    h = np.broadcast_to(h, final_shape)
     
-#     # 3. Initialize Output with ZEROS (Not NaN)
-#     Rb = np.zeros(final_shape, dtype=float)
+    # 3. Initialize Output with ZEROS (Not NaN)
+    Rb = np.zeros(final_shape, dtype=float)
     
-#     # 4. Identify Valid Inputs
-#     # If CA <= 0 OR V <= 0, mask is False -> Result stays 0.0
-#     alive = np.logical_and(CA > 0, V > 0)
+    # 4. Identify Valid Inputs
+    # If CA <= 0 OR V <= 0, mask is False -> Result stays 0.0
+    alive = np.logical_and(CA > 0, V > 0)
     
-#     if not np.any(alive):
-#         # Optimization: If nothing is valid, return the zero array immediately
-#         # This prevents any math errors or NaN generation
-#         return Rb.item() if final_shape == () else Rb
+    if not np.any(alive):
+        # Optimization: If nothing is valid, return the zero array immediately
+        # This prevents any math errors or NaN generation
+        return Rb.item() if final_shape == () else Rb
 
-#     # 5. Extract Valid Data
-#     ca_v = CA[alive]
-#     v_v = V[alive]
-#     h_v = h[alive]
+    # 5. Extract Valid Data
+    theta_rad = CA[alive]
+    v_v = V[alive]
+    h_v = h[alive]
     
-#     # 6. Calculate Coefficients
-#     theta_rad = np.radians(ca_v)
-#     cos_t = np.cos(theta_rad)
-#     sin_t = np.sin(theta_rad)
+    # 6. Calculate Coefficients
     
-#     # Safe geometric factor
-#     geo = np.where(np.abs(cos_t) > 1e-9, (1 - sin_t) / cos_t, 0.0)
+    cos_t = np.cos(theta_rad)
+    sin_t = np.sin(theta_rad)
     
-#     A = np.pi * h_v
-#     B = -0.5 * np.pi * (h_v**2) * geo
-#     C = -v_v
+    # Safe geometric factor
+    geo = np.where(np.abs(cos_t) > 1e-9, (1 - sin_t) / cos_t, 0.0)
     
-#     # 7. Solve Quadratic
-#     # We vectorize the root finding to avoid apply_along_axis overhead/issues
-#     # Discriminant D = B^2 - 4AC
-#     D = B**2 - 4*A*C
+    A = np.pi * h_v
+    B = -0.5 * np.pi * (h_v**2) * geo
+    C = -v_v
     
-#     # Initialize solution array for valid items
-#     sol_v = np.zeros_like(A)
+    # 7. Solve Quadratic
+    # We vectorize the root finding to avoid apply_along_axis overhead/issues
+    # Discriminant D = B^2 - 4AC
+    D = B**2 - 4*A*C
     
-#     # Mask for real roots (D >= 0)
-#     real_roots_mask = D >= 0
+    # Initialize solution array for valid items
+    sol_v = np.zeros_like(A)
     
-#     if np.any(real_roots_mask):
-#         # Calculate roots only where discriminant is non-negative
-#         sqrt_D = np.sqrt(D[real_roots_mask])
-#         A_r = A[real_roots_mask]
-#         B_r = B[real_roots_mask]
+    # Mask for real roots (D >= 0)
+    real_roots_mask = D >= 0
+    
+    if np.any(real_roots_mask):
+        # Calculate roots only where discriminant is non-negative
+        sqrt_D = np.sqrt(D[real_roots_mask])
+        A_r = A[real_roots_mask]
+        B_r = B[real_roots_mask]
         
-#         # Two possible roots
-#         r1 = (-B_r + sqrt_D) / (2 * A_r)
-#         r2 = (-B_r - sqrt_D) / (2 * A_r)
+        # Two possible roots
+        r1 = (-B_r + sqrt_D) / (2 * A_r)
+        r2 = (-B_r - sqrt_D) / (2 * A_r)
         
-#         # Select the positive root
-#         # Logic: If r1 > 0 take r1, else if r2 > 0 take r2, else 0
-#         # Since C = -V (negative) and A = pi*h (positive), C/A is negative.
-#         # Product of roots r1*r2 = C/A < 0. This means one root is always positive, one negative.
-#         # So we just take the max(r1, r2) or the one > 0.
-#         roots_pos = np.where(r1 > 0, r1, r2)
+        # Select the positive root
+        # Logic: If r1 > 0 take r1, else if r2 > 0 take r2, else 0
+        # Since C = -V (negative) and A = pi*h (positive), C/A is negative.
+        # Product of roots r1*r2 = C/A < 0. This means one root is always positive, one negative.
+        # So we just take the max(r1, r2) or the one > 0.
+        roots_pos = np.where(r1 > 0, r1, r2)
         
-#         sol_v[real_roots_mask] = roots_pos
+        sol_v[real_roots_mask] = roots_pos
     
-#     # 8. Assign back to main array
-#     Rb[alive] = sol_v
+    # 8. Assign back to main array
+    Rb[alive] = sol_v
     
-#     # 9. Return scalar if input was scalar
-#     if final_shape == ():
-#         return float(Rb) # Ensure native python float, not 0-d array
-#     else:
-#         return Rb
+    # 9. Return scalar if input was scalar
+    if final_shape == ():
+        return float(Rb) # Ensure native python float, not 0-d array
+    else:
+        return Rb
 
 
 def GetHeight(Rb, V):
@@ -627,14 +627,18 @@ def Sandwich(x, y, a, Rs, dVdt_iso, N='all', dist='none', solver='dense'):
     """Calculating modified Wray et al. 2020 theoretical
     evaporation rates for multiple sandwich droplets.
     Returns droplet evaporation rates in L/s."""
-    
+    x = np.asarray(x)
+    y = np.asarray(y)
+    a = np.atleast_1d(np.asarray(a))  # FIX: Handle scalar a
+    dVdt_iso = np.asarray(dVdt_iso)
+
     x_diff = x[:,None]-x[None,:]
     y_diff = y[:,None]-y[None,:]
     r = np.sqrt(x_diff**2+y_diff**2)
     np.fill_diagonal(r,1)
 
     a_b = a[:,None]
-    X = -(2/np.pi) * a_b/np.log(r/Rs)  
+    X = np.log(Rs/r)/np.log(Rs/a_b)
 
     np.fill_diagonal(X,1)
     if dist != 'none':
@@ -662,16 +666,31 @@ def Sandwich(x, y, a, Rs, dVdt_iso, N='all', dist='none', solver='dense'):
 
     return dVdt*1000 # return theoretical flux values
 
-def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T, n=0, i=1):
+def getIsolated_Wray(csat, H, Rb, V, rho_liquid, D, Mm, sigma, T, n=0, i=1):
+    """Returns the evaporation rate for an isolated droplet on a substrate at a 
+    temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
+    liquid density (rho_liquid)."""
+
+    phi_sat = kohler(n,Mm,sigma,T,rho_liquid, 1, V, i) # large curvature because droplets are flat
+
+    dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
+    f_theta = 2/np.sqrt(2) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
+    dmdt_geom = np.pi*Rb*f_theta 
+    dmdt=dmdt_env*dmdt_geom 
+    dVdt_isolated=-(dmdt/rho_liquid) # m3/s - Convention is to have -dVdt as evaporation
+    
+    return dVdt_isolated
+
+def getIsolated_Masoud(csat, H, Rb, CA, V, rho_liquid, D, Mm, sigma, T, n=0, i=1):
     """Returns the evaporation rate for an isolated droplet on a substrate at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
 
     if np.any(CA==0):
         r = np.where(CA==0,Rb,Rb/np.sin(CA))
-        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, r, CA, i)
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, r, V, i)
     else:
-        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, Rb/np.sin(CA), CA, i)
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, Rb/np.sin(CA), V, i)
 
     dmdt_env = D*csat*(phi_sat-H) # Calculate envionmental component of flux.
     f_theta = 2/np.sqrt(1+np.cos(CA)) # Hu 2014 (0 to pi) was: 0.27*(CA**2)+1.30 0 to pi/2
@@ -681,16 +700,16 @@ def getIsolated(csat, H, Rb, CA, rho_liquid, D, Mm, sigma, T, n=0, i=1):
     
     return dVdt_isolated
 
-def sandwichIsolated(csat, phi, Rb, CA, h, Rs, rc, rho_liquid, D, Mm, sigma, T, n=0, i=1):
+def sandwichIsolated(csat, phi, Rb, CA, V, h, Rs, rc, rho_liquid, D, Mm, sigma, T, n=0, i=1):
     """Returns the evaporation rate for an isolated droplet between two circular plates at a 
     temperature (oC), humidity (H) and for a base radius (Rb) and contact angle (CA) and
     liquid density (rho_liquid)."""
 
     if np.any(CA==0):
         r = np.where(CA==0,Rb,Rb/np.sin(CA))
-        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, r, CA, i)
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, r, V, i)
     else:
-        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, Rb/np.sin(CA), CA, i)
+        phi_sat = kohler(n,Mm,sigma,T,rho_liquid, Rb/np.sin(CA), V, i)
 
     dmdt_env = D*csat*(phi_sat-phi) # Calculate envionmental component of flux.
     
@@ -714,11 +733,10 @@ def gas_density(ABCs, mms, phis, T):
     rho = (((101325+np.sum(-1*(ps*phis)))*0.02897)+np.sum(phis*ps*mms))/(8.314*(T+273.15))
     return rho
 
-def kohler(n,Mm,sigma,T,rho,radius, CA, i=1):
+def kohler(n,Mm,sigma,T,rho,radius, V, i=1):
     """Kohler theory calculating the vapour pressures variation due to:
     The Kelvin effect and The Raoult effect."""
     Di = radius*2 # diameter (m)
-    V = GetVolumeCAr(CA, radius)/1000 # convert to m3
     kelvin = (4*Mm*sigma)/(8.314*(T+273.15)*rho*Di)
     Raoult = (n*i*Mm)/(rho*V)
     p_eq = np.exp(kelvin-Raoult)

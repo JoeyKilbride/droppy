@@ -93,27 +93,33 @@ def Iterate(RunTimeInputs, output_target, plot=False):
     
     csat = pm.ideal_gas_law(pm.Psat(*RunTimeInputs['Antoine_coeffs'][0], RunTimeInputs['Ambient_T']), RunTimeInputs['Ambient_T'],  RunTimeInputs['molar_masses'][0])
     if RunTimeInputs['model'] == "Wray":
-        dVdt_iso    = pm.getIsolated(csat ,RH, r0, 0, RunTimeInputs['rho_liquid'], 
-                                        RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                        RunTimeInputs['n_mols'], RunTimeInputs['i'])
+        dVdt_iso    = pm.getIsolated_Wray(csat ,RH, r0, Vi, RunTimeInputs['rho_liquid'], 
+            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+            RunTimeInputs['n_mols'], RunTimeInputs['i'])
     elif RunTimeInputs['model'] == "Sandwich":
-        dVdt_iso = pm.sandwichIsolated(csat ,RH, r0, theta, RunTimeInputs['h'], RunTimeInputs['Rs'], RunTimeInputs['rc'], RunTimeInputs['rho_liquid'],
-                                        RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                        RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                        RunTimeInputs['n_mols'], RunTimeInputs['i'])
+        dVdt_iso = pm.sandwichIsolated(csat ,RH, r0, theta, V, RunTimeInputs['h'], RunTimeInputs['Rs'], RunTimeInputs['rc'], RunTimeInputs['rho_liquid'],
+            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+            RunTimeInputs['n_mols'], RunTimeInputs['i'])
     else:
-        dVdt_iso    = pm.getIsolated(csat ,RH, r0, theta, RunTimeInputs['rho_liquid'], 
-                                                RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                                RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T']
-                                                ,RunTimeInputs['n_mols'], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
-    
+        dVdt_iso    = pm.getIsolated_Masoud(csat ,RH, r0, theta,Vi, RunTimeInputs['rho_liquid'], 
+            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+            RunTimeInputs['n_mols'], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
+
     if plot:
         vmax1 = [0,np.max(theta)*180/np.pi]
         if RunTimeInputs['mode'] == "CAH":
             vmax1 = [np.min(theta_r)*(180/np.pi),np.max(theta_a)*(180/np.pi)]
             cmtype1='rainbow'
-        dVdt_new = pm.Masoud(xc, yc, r0, dVdt_iso, theta, RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'], RunTimeInputs['nterms'])
+        if RunTimeInputs['model']=="Masoud":
+            print(dVdt_iso)
+            dVdt_new = pm.Masoud(xc, yc, r0, dVdt_iso, theta, RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'], RunTimeInputs['nterms'])
+        if RunTimeInputs['model']=="Wray":
+            dVdt_new=pm.WrayFabricant(xc, yc, r0, dVdt_iso, RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'])
+        if RunTimeInputs['model']=="Sandwich":
+            dVdt_new = pm.Sandwich(xc[alive], yc[alive], r0[alive], RunTimeInputs['Rs'], dVdt_iso, RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'])
         vmax2 = [min(dVdt_new),max(dVdt_new)]
         if vmax2[0]>0: # all condensing
             vmax2[0]=0
@@ -268,18 +274,23 @@ def Iterate(RunTimeInputs, output_target, plot=False):
                 
             print("Average radius: ", np.mean(r0[alive]))
             Vprev       = deepcopy(Vi)
-            if RunTimeInputs['model'] == "Sandwich":
-                dVdt_iso = pm.sandwichIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['h'], RunTimeInputs['Rs'], RunTimeInputs['rc'][alive], RunTimeInputs['rho_liquid'],
-                                                RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                                RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                                nmols[alive], RunTimeInputs['i']) # Incropera pp.209
-                
+            if RunTimeInputs['model'] == "Wray":
+                dVdt_iso    = pm.getIsolated_Wray(csat ,RH, r0[alive], Vi[alive], RunTimeInputs['rho_liquid'], 
+                    RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                    RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                    RunTimeInputs['n_mols'][alive], RunTimeInputs['i'])
+            elif RunTimeInputs['model'] == "Sandwich":
+                dVdt_iso = pm.sandwichIsolated(csat ,RH, r0[alive], theta[alive], Vi[alive], RunTimeInputs['h'], RunTimeInputs['Rs'], RunTimeInputs['rc'][alive], RunTimeInputs['rho_liquid'],
+                    RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                    RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                    RunTimeInputs['n_mols'][alive], RunTimeInputs['i'])
             else:
-                dVdt_iso    = pm.getIsolated(csat ,RH, r0[alive], theta[alive], RunTimeInputs['rho_liquid'], 
-                                            RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
-                                            RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
-                                            nmols[alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
-                
+                dVdt_iso = pm.getIsolated_Masoud(csat ,RH, r0[alive], theta[alive], Vi[alive], RunTimeInputs['rho_liquid'], 
+                    RunTimeInputs['D'], RunTimeInputs['molar_masses'][0], 
+                    RunTimeInputs['surface_tension'], RunTimeInputs['Ambient_T'],
+                    RunTimeInputs['n_mols'][alive], RunTimeInputs['i']) # Using Hu & Larson 2002 eqn. 19
+
+
             if RunTimeInputs['model'] == "Masoud":
                 tic = time.perf_counter()
                 dVdt_new = pm.Masoud(xc[alive], yc[alive], r0[alive], dVdt_iso, theta[alive], RunTimeInputs['n_nearest'], RunTimeInputs['within_d'], RunTimeInputs['matrix_solver'], RunTimeInputs['nterms'])
